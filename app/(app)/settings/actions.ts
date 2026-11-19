@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { inviteUserAs } from "@/lib/admin/invite";
 import { requireActiveProfile, requireAdmin } from "@/lib/auth/current-profile";
 import { APP_ROLES } from "@/lib/db/types";
 import { getPublicEnv } from "@/lib/env/public";
@@ -37,24 +38,19 @@ export async function updateDisplayName(
   return { status: "ok", message: "Saved." };
 }
 
-const inviteSchema = z.object({ email: z.email("Enter a valid email address.") });
-
 export async function inviteUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const admin = await requireAdmin();
-  const parsed = inviteSchema.safeParse({ email: formData.get("email") });
-  if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message };
-
-  // Service role is needed for auth admin calls; permission was checked above.
-  const { error } = await createAdminClient().auth.admin.inviteUserByEmail(parsed.data.email, {
-    redirectTo: `${getPublicEnv().NEXT_PUBLIC_SITE_URL}/auth/callback`,
-    data: { invited_by: admin.id },
+  // Server actions are public endpoints: the active-admin check happens inside
+  // inviteUserAs, against the DB, before the secret-key client is used.
+  const result = await inviteUserAs(await createClient(), createAdminClient(), {
+    email: formData.get("email"),
+    siteUrl: getPublicEnv().NEXT_PUBLIC_SITE_URL,
   });
-  if (error) return { status: "error", message: `Invite failed: ${error.message}` };
+  if (!result.ok) return { status: "error", message: result.message };
 
   revalidatePath("/settings");
   return {
     status: "ok",
-    message: `Invite sent to ${parsed.data.email}. They'll appear below as an inactive buyer.`,
+    message: `Invite sent to ${result.email}. They'll appear below as an inactive buyer.`,
   };
 }
 
