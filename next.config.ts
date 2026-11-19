@@ -6,9 +6,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   turbopack: {
     rules: {
+      // No `as: "*.css"`: Tailwind (4.3.5) advises against it because it breaks CSS modules.
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
       },
     },
   },
