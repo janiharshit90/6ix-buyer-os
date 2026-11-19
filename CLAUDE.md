@@ -131,7 +131,7 @@ Append one line per decision: date — decision — why.
 - 2026-11-20 — All DB/RLS tests run against the local Supabase stack (Docker Desktop, WSL2) — fast, isolated, never pollutes the hosted dev project.
 - 2026-11-20 — Package manager: pnpm — fast, strict dependency resolution.
 - 2026-11-20 — Buyer data isolation (applies from M1): buyers READ (not edit) other buyers' offers, offer versions, research projects, briefs, angles, scripts, copy and saved ads; ai_calls and user-level budgets are private to owner + manager/admin; audit_log is manager/admin only; creatives see approved briefs/scripts/copy only and never economics columns — team learning without leaking cost data.
-- 2026-11-20 — Economics hiding via column grants + a `security_invoker` view (M1) — RLS filters rows, not columns.
+- 2026-11-20 — Economics hiding: payout tiers, target_cpl and target_roi live in a separate `offer_version_economics` table (1:1 with offer_versions) whose RLS denies creatives; a `security_invoker` view joins it back for buyer/manager screens — column grants apply per Postgres role and every app user is `authenticated`, so grants alone can't tell a creative from a buyer. (Replaces the earlier "column grants + security_invoker view" line.)
 - 2026-11-20 — Invite-only: public sign-ups disabled in Supabase, admins invite users; new users = buyer, active = false until an admin activates them; no email-domain restriction — team uses personal Gmail accounts.
 - 2026-11-20 — First admin via `BOOTSTRAP_ADMIN_EMAIL` env var (no "first user becomes admin"): when that exact email signs in, its profile becomes active admin; log it to audit_log once that table exists (M1) — explicit, no race.
 - 2026-11-20 — Auth: Google + magic link — no passwords to manage.
@@ -146,3 +146,14 @@ Append one line per decision: date — decision — why.
 - 2026-11-20 — M0: invite + magic-link emails link to `/auth/callback?token_hash=…` (templates in `supabase/templates/`) — invites can't use PKCE; the same templates must be pasted into each hosted project.
 - 2026-11-20 — M0: Google sign-in is configured on hosted projects only; local dev and tests use magic links — no Google credentials needed locally.
 - 2026-11-20 — Runtime is Node 24 (CI, `engines`, Vercel); `@types/node` stays on the same major, so Dependabot ignores its major bumps — types must describe the runtime we actually run.
+- 2026-11-20 — M1: offer versions are approved by manager/admin only; a buyer can't approve their own offer — four-eyes on offer facts.
+- 2026-11-20 — M1: intake shows a code-computed missing-fields checklist; AI flagging of missing/unconfirmed fields moves to M2 — the AI service doesn't exist yet.
+- 2026-11-20 — M1: `offer_urls` belong to `offer_version_id`, not the offer; approved URLs are immutable and a new draft copies them — URLs are offer facts and must be versioned like the rest.
+- 2026-11-20 — M1: `approvals` table added now; every approve writes an approvals row plus an audit_log row — briefs/angles/scripts reuse it in M5+.
+- 2026-11-20 — M1: economics = payout tiers, target_cpl, target_roi (hidden from creatives); payout_model, caps, states and call hours stay visible — creatives need payout_model (e.g. pay-per-call) to pick the CTA.
+- 2026-11-20 — M1: data shapes — payout_tiers `[{label, amount_usd, condition}]`; call_hours `{timezone, days: {mon: [{start, end}], …}}`; restrictions `{banned_claims[], banned_words[], notes}`; target_roi is a percent numeric(6,2); cap_period `day|week|month|total`; offers.status `active|paused|archived`; vertical is free text; states are US 2-letter codes plus DC; approval_required = the network must approve us to run the offer (not internal approval).
+- 2026-11-20 — M1: one draft per offer at a time; approved offer versions (and their economics and URLs) can't be updated or deleted by anyone, service role included; editing calls `create_draft_from_approved`, which copies into version n+1 — Non-negotiable #3, enforced in the DB.
+- 2026-11-20 — M1: audit_log is append-only and written only by DB triggers/functions (no client insert grant), including role/active changes and bootstrap_admin — can't be forged or skipped by app code.
+- 2026-11-20 — Bootstrap script is `.mts` — fixes MODULE_TYPELESS_PACKAGE_JSON without flipping the whole package to `"type": "module"`.
+- 2026-11-20 — M1 done: offers intake (Zod form → `save_offer_draft` RPC), draft/approve/new-draft flow, approvals + audit_log; users who own offers can't be deleted (approved rows are immutable), so tests leave them in the local DB — `pnpm db:reset` clears them.
+- 2026-11-20 — Sidebar active-link state streams behind `<Suspense>` — `usePathname()` outside Suspense blocked prerendering of dynamic routes like `/offers/[offerId]`.

@@ -94,13 +94,19 @@ describe("cross-buyer access via the Data API", () => {
     });
     expect(rpc.error?.code).toBe("42501");
 
-    const { data: row } = await adminClient().from("offers").select("name").eq("id", offerId).single();
+    const { data: row } = await adminClient()
+      .from("offers")
+      .select("name")
+      .eq("id", offerId)
+      .single();
     expect(row?.name).toBe(`Offer ${tag}`);
   });
 
   it("a buyer cannot approve, not even their own offer", async () => {
     const draft = await createOffer(asBuyerA, `Own ${tag}`);
-    const { error } = await asBuyerA.rpc("approve_offer_version", { p_version_id: draft.version_id });
+    const { error } = await asBuyerA.rpc("approve_offer_version", {
+      p_version_id: draft.version_id,
+    });
     expect(error?.code).toBe("42501");
   });
 
@@ -113,7 +119,11 @@ describe("cross-buyer access via the Data API", () => {
 
 describe("creatives never see economics", () => {
   it("sees the approved version, including payout_model, but no economics columns", async () => {
-    const { data, error } = await asCreative.from("offer_versions").select("*").eq("id", v1).single();
+    const { data, error } = await asCreative
+      .from("offer_versions")
+      .select("*")
+      .eq("id", v1)
+      .single();
     expect(error).toBeNull();
     expect(data?.payout_model).toBe("ppc");
     for (const column of ["payout_tiers", "target_cpl", "target_roi"]) {
@@ -224,7 +234,7 @@ describe("deactivation", () => {
       const econ = await asLeaver.from("offer_version_economics").select("id");
       expect(econ.data).toEqual([]);
       const save = await asLeaver.rpc("save_offer_draft", {
-            p_offer: { name: `Leaver ${tag}` },
+        p_offer: { name: `Leaver ${tag}` },
         p_version: {},
         p_economics: {},
         p_urls: [],
