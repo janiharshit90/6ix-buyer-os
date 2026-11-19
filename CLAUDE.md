@@ -145,3 +145,4 @@ Append one line per decision: date — decision — why.
 - 2026-11-20 — M0: emails stay in auth.users only (admin Users page reads them via the service role) — no PII copied into profiles.
 - 2026-11-20 — M0: invite + magic-link emails link to `/auth/callback?token_hash=…` (templates in `supabase/templates/`) — invites can't use PKCE; the same templates must be pasted into each hosted project.
 - 2026-11-20 — M0: Google sign-in is configured on hosted projects only; local dev and tests use magic links — no Google credentials needed locally.
+- 2026-11-20 — Runtime is Node 24 (CI, `engines`, Vercel); `@types/node` stays on the same major, so Dependabot ignores its major bumps — types must describe the runtime we actually run.
