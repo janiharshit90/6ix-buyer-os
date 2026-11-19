@@ -49,3 +49,8 @@ desktop.ini
 
 # Local Claude settings (shared settings.json stays tracked)
 .claude/settings.local.json
+
+# Misc
+*.pem
+.pnp
+.pnp.*
