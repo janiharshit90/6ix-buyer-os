@@ -128,3 +128,13 @@ Append one line per decision: date — decision — why.
 - 2026-10-10 — Meta only, US only, internal — focus and speed; other platforms later.
 - 2026-10-10 — Slice 1 = research → angles → scripts → copy — biggest daily pain, no Meta API dependency.
 - 2026-10-10 — Build M0–M4 before survey results; M5+ waits for survey — foundations are survey-proof.
+- 2026-11-20 — All DB/RLS tests run against the local Supabase stack (Docker Desktop, WSL2) — fast, isolated, never pollutes the hosted dev project.
+- 2026-11-20 — Package manager: pnpm — fast, strict dependency resolution.
+- 2026-11-20 — Buyer data isolation (applies from M1): buyers READ (not edit) other buyers' offers, offer versions, research projects, briefs, angles, scripts, copy and saved ads; ai_calls and user-level budgets are private to owner + manager/admin; audit_log is manager/admin only; creatives see approved briefs/scripts/copy only and never economics columns — team learning without leaking cost data.
+- 2026-11-20 — Economics hiding via column grants + a `security_invoker` view (M1) — RLS filters rows, not columns.
+- 2026-11-20 — Invite-only: public sign-ups disabled in Supabase, admins invite users; new users = buyer, active = false until an admin activates them; no email-domain restriction — team uses personal Gmail accounts.
+- 2026-11-20 — First admin via `BOOTSTRAP_ADMIN_EMAIL` env var (no "first user becomes admin"): when that exact email signs in, its profile becomes active admin; log it to audit_log once that table exists (M1) — explicit, no race.
+- 2026-11-20 — Auth: Google + magic link — no passwords to manage.
+- 2026-11-20 — TODO before team rollout: custom SMTP (e.g. Resend) for auth emails — Supabase's default email sender is rate-limited.
+- 2026-11-20 — PARKED for M2: how background jobs respect RLS. Evaluate (a) short-lived user tokens (risk: expire mid-job) vs (b) service role + explicit permission check at job start, with tests — decide at M2.
+- 2026-11-20 — Branch workflow: one PR per milestone into main; Nirmal reviews the diff before merging.
