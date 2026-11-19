@@ -1,6 +1,6 @@
 -- profiles: creation on invite/sign-up, and the BOOTSTRAP_ADMIN_EMAIL path.
 begin;
-select plan(9);
+select plan(12);
 
 -- ── profile auto-creation ───────────────────────────────────────────────────
 insert into auth.users (instance_id, id, aud, role, email, encrypted_password, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -51,6 +51,13 @@ select is(
   'bootstrapped user is an active admin'
 );
 
+select is(
+  (select row(actor, entity_id, before ->> 'role', after ->> 'role', after ->> 'active')::text
+   from public.audit_log where action = 'auth.bootstrap_admin'),
+  row(tests.user_id('boss'), tests.user_id('boss'), 'buyer', 'admin', 'true')::text,
+  'bootstrap is audit-logged with the bootstrapped user as actor'
+);
+
 set local role service_role;
 select is(
   public.bootstrap_admin(tests.user_id('other')),
@@ -71,6 +78,17 @@ select lives_ok(
   'service role can change active status (server-side admin tooling)'
 );
 reset role;
+select is(
+  (select count(*)::int from public.audit_log where action = 'auth.bootstrap_admin'),
+  1,
+  'a refused bootstrap writes no bootstrap audit row'
+);
+select is(
+  (select row(action, actor)::text from public.audit_log
+   where entity_id = tests.user_id('other') and after ->> 'active' = 'true'),
+  row('profiles.update', null::uuid)::text,
+  'later service-role changes are logged normally (bootstrap label cleared), actor NULL = system'
+);
 
 select tests.authenticate_as('boss');
 select throws_ok(

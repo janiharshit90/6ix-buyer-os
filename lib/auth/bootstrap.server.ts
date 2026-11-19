@@ -21,8 +21,8 @@ export async function maybeBootstrapAdmin(user: { id: string; email?: string | n
 
   if (data) {
     // User id only: no emails or tokens in logs.
+    // public.bootstrap_admin also writes the audit_log row ('auth.bootstrap_admin') in the same transaction.
     console.info(`[auth] bootstrap admin granted to user ${user.id}`);
-    // TODO(M1): write an audit_log row (actor = user, action = 'bootstrap_admin').
   }
   return data === true;
 }
