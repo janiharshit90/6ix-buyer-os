@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { inviteUserAs } from "@/lib/admin/invite";
 import { requireActiveProfile, requireAdmin } from "@/lib/auth/current-profile";
-import { APP_ROLES } from "@/lib/db/types";
+import { APP_ROLES } from "@/lib/db/roles";
 import { getPublicEnv } from "@/lib/env/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";

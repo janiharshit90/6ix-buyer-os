@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { APP_ROLES, type AppRole } from "@/lib/db/types";
+import { APP_ROLES, type AppRole } from "@/lib/db/roles";
 
 import { inviteUser, updateDisplayName, updateUserAccess, type ActionState } from "./actions";
 
