@@ -1,0 +1,2 @@
+-- Local-only seed data (runs on `supabase db reset`). Intentionally empty:
+-- tests create their own users, and real users are invited through the app.
