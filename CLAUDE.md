@@ -128,3 +128,20 @@ Append one line per decision: date — decision — why.
 - 2026-10-10 — Meta only, US only, internal — focus and speed; other platforms later.
 - 2026-10-10 — Slice 1 = research → angles → scripts → copy — biggest daily pain, no Meta API dependency.
 - 2026-10-10 — Build M0–M4 before survey results; M5+ waits for survey — foundations are survey-proof.
+- 2026-11-20 — All DB/RLS tests run against the local Supabase stack (Docker Desktop, WSL2) — fast, isolated, never pollutes the hosted dev project.
+- 2026-11-20 — Package manager: pnpm — fast, strict dependency resolution.
+- 2026-11-20 — Buyer data isolation (applies from M1): buyers READ (not edit) other buyers' offers, offer versions, research projects, briefs, angles, scripts, copy and saved ads; ai_calls and user-level budgets are private to owner + manager/admin; audit_log is manager/admin only; creatives see approved briefs/scripts/copy only and never economics columns — team learning without leaking cost data.
+- 2026-11-20 — Economics hiding via column grants + a `security_invoker` view (M1) — RLS filters rows, not columns.
+- 2026-11-20 — Invite-only: public sign-ups disabled in Supabase, admins invite users; new users = buyer, active = false until an admin activates them; no email-domain restriction — team uses personal Gmail accounts.
+- 2026-11-20 — First admin via `BOOTSTRAP_ADMIN_EMAIL` env var (no "first user becomes admin"): when that exact email signs in, its profile becomes active admin; log it to audit_log once that table exists (M1) — explicit, no race.
+- 2026-11-20 — Auth: Google + magic link — no passwords to manage.
+- 2026-11-20 — TODO before team rollout: custom SMTP (e.g. Resend) for auth emails — Supabase's default email sender is rate-limited.
+- 2026-11-20 — PARKED for M2: how background jobs respect RLS. Evaluate (a) short-lived user tokens (risk: expire mid-job) vs (b) service role + explicit permission check at job start, with tests — decide at M2.
+- 2026-11-20 — Branch workflow: one PR per milestone into main; Nirmal reviews the diff before merging.
+- 2026-11-20 — M0: Next.js 16 with Cache Components (framework default); session reads stream behind `<Suspense>`, the `(app)` layout gates signed-out → /login and inactive → /pending — static shell stays fast, auth stays server-side.
+- 2026-11-20 — M0: RLS helpers live in a non-exposed `private` schema; `private.current_user_role()` returns NULL for inactive users, so inactive = no access everywhere — one rule for every future policy.
+- 2026-11-20 — M0: role/active changes are guarded in the DB (column grants + `profiles_guard` trigger: admins only, last active admin can't be removed) — escalation-proof even if the UI or a server action is wrong.
+- 2026-11-20 — M0: bootstrap = `/auth/callback` compares the verified email to BOOTSTRAP_ADMIN_EMAIL and calls service-role-only `public.bootstrap_admin()`, which succeeds only while no active admin exists — the DB can't read app env vars, and a later-demoted bootstrap user can't be re-promoted.
+- 2026-11-20 — M0: emails stay in auth.users only (admin Users page reads them via the service role) — no PII copied into profiles.
+- 2026-11-20 — M0: invite + magic-link emails link to `/auth/callback?token_hash=…` (templates in `supabase/templates/`) — invites can't use PKCE; the same templates must be pasted into each hosted project.
+- 2026-11-20 — M0: Google sign-in is configured on hosted projects only; local dev and tests use magic links — no Google credentials needed locally.
