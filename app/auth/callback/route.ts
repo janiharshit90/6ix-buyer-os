@@ -47,5 +47,15 @@ export async function GET(request: NextRequest) {
 
   await maybeBootstrapAdmin(result.data.user);
 
-  return NextResponse.redirect(new URL(next, request.url));
+  // Not yet activated → straight to the holding page instead of bouncing off the gate.
+  // Read through the user's own RLS (inactive users can read their own row).
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active")
+    .eq("id", result.data.user.id)
+    .maybeSingle();
+  if (profileError) return fail("profile_unavailable");
+  const destination = profile?.active ? next : "/pending";
+
+  return NextResponse.redirect(new URL(destination, request.url));
 }

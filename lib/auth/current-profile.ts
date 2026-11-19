@@ -1,9 +1,10 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 
-import type { AppRole } from "@/lib/db/types";
+import type { AppRole } from "@/lib/db/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export type CurrentProfile = {
@@ -19,6 +20,9 @@ export type CurrentProfile = {
  * Deduplicated per request with React cache().
  */
 export const getCurrentProfile = cache(async (): Promise<CurrentProfile | null> => {
+  // Session checks compare token expiry to the current time, so they must run at
+  // request time, never during prerender (Cache Components).
+  await connection();
   const supabase = await createClient();
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
   if (claimsError || !claimsData?.claims?.sub) return null;

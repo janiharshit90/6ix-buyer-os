@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execSync } from "node:child_process";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -13,9 +13,9 @@ export function localStack(): LocalStack {
   if (stack) return stack;
   let out: string;
   try {
-    out = execFileSync("npx", ["supabase", "status", "--output", "json"], {
+    // Fixed command string, no interpolated input.
+    out = execSync("npx supabase status --output json", {
       encoding: "utf8",
-      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "ignore"],
     });
   } catch {

@@ -15,6 +15,7 @@ const ERRORS: Record<string, string> = {
   missing_token: "That sign-in link is incomplete. Request a new one.",
   google_failed: "Couldn't start Google sign-in. Try again.",
   signout_failed: "Sign-out failed. Try again.",
+  profile_unavailable: "Signed in, but your profile couldn't be loaded. Try again.",
 };
 
 export function LoginForm() {
