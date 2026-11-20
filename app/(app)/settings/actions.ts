@@ -86,3 +86,92 @@ export async function updateUserAccess(
   revalidatePath("/settings");
   return { status: "ok", message: "Saved." };
 }
+
+// ---------------------------------------------------------------------------
+// AI budgets (admins). User-scoped client: RLS lets only admins write budgets, and every
+// change is audited by a DB trigger, even if the requireAdmin check above were wrong.
+// ---------------------------------------------------------------------------
+
+const capUsd = z
+  .string()
+  .trim()
+  .regex(/^\d{1,7}(\.\d{1,2})?$/, "Enter a dollar amount like 20 or 20.50.")
+  .transform(Number);
+
+const workspaceCapSchema = z.object({ capUsd });
+
+export async function setWorkspaceCap(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+  const parsed = workspaceCapSchema.safeParse({ capUsd: formData.get("capUsd") });
+  if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message };
+
+  const supabase = await createClient();
+  const { data: existing, error: readError } = await supabase
+    .from("budgets")
+    .select("id")
+    .eq("scope", "workspace")
+    .maybeSingle();
+  if (readError) return { status: "error", message: readError.message };
+
+  const { error } = existing
+    ? await supabase
+        .from("budgets")
+        .update({ monthly_cap_usd: parsed.data.capUsd })
+        .eq("id", existing.id)
+    : await supabase
+        .from("budgets")
+        .insert({ scope: "workspace", scope_id: null, monthly_cap_usd: parsed.data.capUsd });
+  if (error) return { status: "error", message: error.message };
+
+  revalidatePath("/settings");
+  return { status: "ok", message: "Workspace cap saved." };
+}
+
+const userCapSchema = z.object({
+  userId: z.uuid(),
+  // Blank = remove the user's own cap (the workspace cap still applies).
+  capUsd: z.union([z.literal(""), capUsd]),
+});
+
+export async function setUserCap(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const parsed = userCapSchema.safeParse({
+    userId: formData.get("userId"),
+    capUsd: String(formData.get("capUsd") ?? "").trim(),
+  });
+  if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message };
+  const { userId, capUsd: cap } = parsed.data;
+
+  const supabase = await createClient();
+  if (cap === "") {
+    const { error } = await supabase
+      .from("budgets")
+      .delete()
+      .eq("scope", "user")
+      .eq("scope_id", userId);
+    if (error) return { status: "error", message: error.message };
+    revalidatePath("/settings");
+    return { status: "ok", message: "Cap removed." };
+  }
+
+  const { data: existing, error: readError } = await supabase
+    .from("budgets")
+    .select("id")
+    .eq("scope", "user")
+    .eq("scope_id", userId)
+    .maybeSingle();
+  if (readError) return { status: "error", message: readError.message };
+
+  const { error } = existing
+    ? await supabase.from("budgets").update({ monthly_cap_usd: cap }).eq("id", existing.id)
+    : await supabase
+        .from("budgets")
+        .insert({ scope: "user", scope_id: userId, monthly_cap_usd: cap });
+  if (error) return { status: "error", message: error.message };
+
+  revalidatePath("/settings");
+  return { status: "ok", message: "Cap saved." };
+}
