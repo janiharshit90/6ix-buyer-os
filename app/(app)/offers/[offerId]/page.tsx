@@ -11,6 +11,7 @@ import { requireActiveProfile } from "@/lib/auth/current-profile";
 import type { Json } from "@/lib/db/types";
 import {
   formatBoolean,
+  formatCap,
   formatDateTime,
   formatPercent,
   formatUsd,
@@ -24,12 +25,18 @@ import {
   getApprovals,
   getOffer,
   getVersions,
+  listAssignableOwners,
   type VersionView,
 } from "@/lib/offers/queries";
 import { missingFields, WEEKDAYS } from "@/lib/offers/schema";
 
 import { MissingChecklist } from "../offer-form";
-import { ApproveForm, DiscardDraftButton, StartDraftButton } from "./version-actions";
+import {
+  ApproveForm,
+  DiscardDraftButton,
+  ReassignOwnerForm,
+  StartDraftButton,
+} from "./version-actions";
 
 export const metadata: Metadata = { title: "Offer" };
 
@@ -61,6 +68,7 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
   const editable = canEditOffer(profile, offer);
   const showEconomics = canSeeEconomics(profile);
   const nextVersion = (versions[0]?.version ?? 0) + 1;
+  const assignableOwners = canApprove(profile) ? await listAssignableOwners() : [];
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -99,6 +107,14 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
             missingFields(checklistFacts(offer.advertiser?.name ?? null, offer.vertical, draft))
               .length
           }
+        />
+      )}
+
+      {canApprove(profile) && (
+        <ReassignOwnerForm
+          offerId={offer.id}
+          currentOwnerId={offer.owner_id}
+          owners={assignableOwners}
         />
       )}
 
@@ -233,11 +249,7 @@ function VersionFacts({
           </>
         )}
         <Fact label="States">{v.states?.length ? v.states.join(", ") : UNKNOWN}</Fact>
-        <Fact label="Cap">
-          {v.cap_amount == null
-            ? UNKNOWN
-            : `${v.cap_amount} ${formatValue(v.cap_counts)} / ${formatValue(v.cap_period)}`}
-        </Fact>
+        <Fact label="Cap">{formatCap(v.cap_amount, v.cap_counts, v.cap_period)}</Fact>
         <Fact label="Optimisation event">{formatValue(v.optimisation_event)}</Fact>
         <Fact label="Feedback delay">
           {v.feedback_delay_days == null ? UNKNOWN : `${v.feedback_delay_days} days`}

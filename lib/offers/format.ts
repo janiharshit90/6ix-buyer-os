@@ -29,3 +29,22 @@ export function formatDateTime(iso: string | null | undefined) {
     }).format(new Date(iso)) + " UTC"
   );
 }
+
+/**
+ * Cap as one readable line. Fully known: "50 calls per day" / "500 billable total".
+ * Partly known: each unknown part is named, e.g. "50 · period unknown · counting unknown".
+ */
+export function formatCap(
+  amount: number | null | undefined,
+  counts: string | null | undefined,
+  period: string | null | undefined,
+) {
+  if (amount == null && !counts && !period) return UNKNOWN;
+  const periodText = period ? (period === "total" ? "total" : `per ${period}`) : null;
+  if (amount != null && counts && periodText) return `${amount} ${counts} ${periodText}`;
+  return [
+    amount ?? "amount unknown",
+    periodText ?? "period unknown",
+    counts ?? "counting unknown",
+  ].join(" · ");
+}

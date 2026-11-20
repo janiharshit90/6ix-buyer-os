@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { draftFromVersion, EMPTY_DRAFT, toPayload, type OfferDraft } from "@/lib/offers/draft";
-import { formatPercent, formatUsd, formatValue } from "@/lib/offers/format";
+import { formatCap, formatPercent, formatUsd, formatValue } from "@/lib/offers/format";
 import {
   missingFields,
   offerFormSchema,
@@ -222,5 +222,20 @@ describe("formatting", () => {
     expect(formatUsd(42.5)).toBe("$42.50");
     expect(formatPercent(null)).toBe("unknown");
     expect(formatValue("")).toBe("unknown");
+  });
+});
+
+describe("formatCap", () => {
+  it.each([
+    [50, "calls", "day", "50 calls per day"],
+    [500, "billable", "total", "500 billable total"],
+    [50, null, null, "50 · period unknown · counting unknown"],
+    [50, "calls", null, "50 · period unknown · calls"],
+    [50, null, "week", "50 · per week · counting unknown"],
+    [null, "calls", "day", "amount unknown · per day · calls"],
+    [0, "submissions", "month", "0 submissions per month"],
+    [null, null, null, "unknown"],
+  ] as const)("formatCap(%s, %s, %s) = %s", (amount, counts, period, expected) => {
+    expect(formatCap(amount, counts, period)).toBe(expected);
   });
 });

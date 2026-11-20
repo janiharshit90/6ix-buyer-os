@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
+  adminClient,
   createTestUser,
   deleteTestUsers,
   magicLinkTokenHash,
@@ -33,7 +34,7 @@ async function approvedOfferViaApi(name: string) {
   const asBuyer = await signedInClient(buyer.email);
   const { data, error } = await asBuyer.rpc("save_offer_draft", {
     p_offer: { name, vertical: "insurance" },
-    p_version: { payout_model: "ppc", states: ["TX"] },
+    p_version: { payout_model: "ppc", states: ["TX"], cap_amount: 50 },
     p_economics: {
       target_cpl: 77.25,
       target_roi: 31,
@@ -107,6 +108,7 @@ test("a creative sees the approved offer without payout tiers or targets", async
   const facts = page.getByTestId("version-facts");
   await expect(facts).toContainText("ppc"); // payout model stays visible
   await expect(facts).toContainText("TX");
+  await expect(facts).toContainText("50 · period unknown · counting unknown");
   await expect(page.getByTestId("payout-tiers")).toHaveCount(0);
   const html = await page.content();
   for (const secret of ["77.25", "secret-tier", "Target CPL", "Target ROI"]) {
@@ -121,4 +123,28 @@ test("a creative cannot open the intake form", async ({ page }) => {
   await signIn(page, creative.email);
   await page.goto("/offers/new");
   await expect(page).toHaveURL(/\/offers$/);
+});
+
+test("a manager reassigns an offer to another buyer", async ({ page }) => {
+  const offerId = await approvedOfferViaApi(`E2E Handover ${crypto.randomUUID().slice(0, 6)}`);
+  const manager = await newUser("manager");
+  const newOwner = await newUser("buyer");
+  await signIn(page, manager.email);
+
+  await page.goto(`/offers/${offerId}`);
+  await page.getByLabel("Owner").selectOption(newOwner.id);
+  await page.getByRole("button", { name: "Reassign" }).click();
+  await expect(page.getByRole("status")).toHaveText("Owner changed.");
+
+  const { data } = await adminClient().from("offers").select("owner_id").eq("id", offerId).single();
+  expect(data?.owner_id).toBe(newOwner.id);
+});
+
+test("a buyer gets no reassign control", async ({ page }) => {
+  const offerId = await approvedOfferViaApi(`E2E NoHandover ${crypto.randomUUID().slice(0, 6)}`);
+  const buyer = await newUser("buyer");
+  await signIn(page, buyer.email);
+  await page.goto(`/offers/${offerId}`);
+  await expect(page.getByTestId("version-facts")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reassign" })).toHaveCount(0);
 });

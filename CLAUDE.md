@@ -157,3 +157,6 @@ Append one line per decision: date — decision — why.
 - 2026-11-20 — Bootstrap script is `.mts` — fixes MODULE_TYPELESS_PACKAGE_JSON without flipping the whole package to `"type": "module"`.
 - 2026-11-20 — M1 done: offers intake (Zod form → `save_offer_draft` RPC), draft/approve/new-draft flow, approvals + audit_log; users who own offers can't be deleted (approved rows are immutable), so tests leave them in the local DB — `pnpm db:reset` clears them.
 - 2026-11-20 — Sidebar active-link state streams behind `<Suspense>` — `usePathname()` outside Suspense blocked prerendering of dynamic routes like `/offers/[offerId]`.
+- 2026-11-20 — M1: offer ownership changes only via `reassign_offer_owner` (manager/admin; new owner must be an active buyer/manager/admin; old owner may be inactive), audited as `offer.reassign_owner`; no direct `owner_id` grant — handovers when someone leaves, without a forgeable path.
+- 2026-11-20 — Proxy redirects signed-in inactive users to /pending before rendering (one `profiles.active` read per request); the `(app)` layout keeps its check as a backstop — a `redirect()` inside the layout's Suspense aborted dev-time instant-navigation validation.
+- 2026-11-20 — Line endings: `.gitattributes` forces LF in the repo and working tree — Windows `core.autocrlf=true` checkouts were producing whitespace-only diffs after `prettier --write`.

@@ -198,6 +198,55 @@ describe("approved versions are immutable", () => {
   });
 });
 
+describe("owner reassignment", () => {
+  it("a buyer cannot reassign, a manager can, and it is audited", async () => {
+    const own = await createOffer(asBuyerA, `Handover ${tag}`);
+
+    const byBuyer = await asBuyerA.rpc("reassign_offer_owner", {
+      p_offer_id: own.offer_id,
+      p_new_owner_id: buyerB.id,
+    });
+    expect(byBuyer.error?.code).toBe("42501");
+
+    const direct = await asManager
+      .from("offers")
+      .update({ owner_id: buyerB.id } as never)
+      .eq("id", own.offer_id);
+    expect(direct.error).not.toBeNull();
+
+    const { error } = await asManager.rpc("reassign_offer_owner", {
+      p_offer_id: own.offer_id,
+      p_new_owner_id: buyerB.id,
+    });
+    expect(error).toBeNull();
+
+    const { data: offer } = await adminClient()
+      .from("offers")
+      .select("owner_id")
+      .eq("id", own.offer_id)
+      .single();
+    expect(offer?.owner_id).toBe(buyerB.id);
+
+    const { data: audit } = await asManager
+      .from("audit_log")
+      .select("actor, before, after")
+      .eq("action", "offer.reassign_owner")
+      .eq("entity_id", own.offer_id)
+      .single();
+    expect(audit?.actor).toBe(manager.id);
+    expect((audit?.before as { owner_id: string }).owner_id).toBe(buyerA.id);
+    expect((audit?.after as { owner_id: string }).owner_id).toBe(buyerB.id);
+  });
+
+  it("an offer cannot be handed to a creative", async () => {
+    const { error } = await asManager.rpc("reassign_offer_owner", {
+      p_offer_id: offerId,
+      p_new_owner_id: creative.id,
+    });
+    expect(error?.code).toBe("P0001");
+  });
+});
+
 describe("audit log", () => {
   it("is readable by managers, not buyers", async () => {
     const asBuyer = await asBuyerA.from("audit_log").select("id").eq("entity_id", offerId);

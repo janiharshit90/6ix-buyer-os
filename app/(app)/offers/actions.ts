@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 // decide what's allowed, not these functions.
 
 export type FormState = {
-  status: "idle" | "error";
+  status: "idle" | "ok" | "error";
   message?: string;
   issues?: { path: string; message: string }[];
 };
@@ -132,4 +132,27 @@ export async function approveOfferVersion(
 
   revalidatePath("/offers");
   redirect(`/offers/${parsed.data.offerId}`);
+}
+
+const reassignSchema = z.object({ offerId: z.uuid(), newOwnerId: z.uuid() });
+
+export async function reassignOfferOwner(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireActiveProfile();
+  const parsed = reassignSchema.safeParse({
+    offerId: formData.get("offerId"),
+    newOwnerId: formData.get("newOwnerId"),
+  });
+  if (!parsed.success) return { status: "error", message: "Pick a new owner." };
+
+  // The RPC checks manager/admin and that the new owner is an active buyer/manager/admin.
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reassign_offer_owner", {
+    p_offer_id: parsed.data.offerId,
+    p_new_owner_id: parsed.data.newOwnerId,
+  });
+  if (error) return { status: "error", message: dbMessage(error) };
+
+  revalidatePath("/offers");
+  revalidatePath(`/offers/${parsed.data.offerId}`);
+  return { status: "ok", message: "Owner changed." };
 }

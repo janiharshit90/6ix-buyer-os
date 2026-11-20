@@ -5,7 +5,13 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-import { approveOfferVersion, discardDraft, startNewDraft, type FormState } from "../actions";
+import {
+  approveOfferVersion,
+  discardDraft,
+  reassignOfferOwner,
+  startNewDraft,
+  type FormState,
+} from "../actions";
 
 const IDLE: FormState = { status: "idle" };
 
@@ -92,6 +98,50 @@ export function ApproveForm({
         {pending ? "Approving…" : `Approve v${version}`}
       </Button>
       <Feedback state={state} />
+    </form>
+  );
+}
+
+export function ReassignOwnerForm({
+  offerId,
+  currentOwnerId,
+  owners,
+}: {
+  offerId: string;
+  currentOwnerId: string;
+  owners: { id: string; display_name: string; role: string }[];
+}) {
+  const [state, action, pending] = useActionState(reassignOfferOwner, IDLE);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="offerId" value={offerId} />
+      <Label htmlFor="newOwnerId">Owner</Label>
+      <select
+        id="newOwnerId"
+        name="newOwnerId"
+        defaultValue={currentOwnerId}
+        className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+      >
+        {!owners.some((o) => o.id === currentOwnerId) && (
+          <option value={currentOwnerId} disabled>
+            current owner (inactive)
+          </option>
+        )}
+        {owners.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.display_name} ({o.role})
+          </option>
+        ))}
+      </select>
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        {pending ? "Reassigning…" : "Reassign"}
+      </Button>
+      <Feedback state={state} />
+      {state.status === "ok" && (
+        <p role="status" className="text-muted-foreground text-sm">
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }

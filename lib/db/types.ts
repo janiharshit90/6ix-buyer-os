@@ -236,6 +236,9 @@ isOneToOne: false
 "create_draft_from_approved":
 { Args: { "p_offer_id": string }; Returns: string
                            },
+"reassign_offer_owner":
+{ Args: { "p_new_owner_id": string,"p_offer_id": string }; Returns: string
+                           },
 "save_offer_draft":
 { Args: { "p_economics"?: Json,"p_offer"?: Json,"p_offer_id"?: string,"p_urls"?: Json,"p_version"?: Json }; Returns: Json
                            }

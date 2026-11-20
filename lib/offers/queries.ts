@@ -131,3 +131,16 @@ export async function getApprovals(versionIds: string[]) {
   if (error) throw new Error(`Could not load approvals: ${error.message}`);
   return data;
 }
+
+/** Who can receive an offer: active buyers, managers and admins (the RPC re-checks this). */
+export async function listAssignableOwners() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, display_name, role")
+    .eq("active", true)
+    .in("role", ["buyer", "manager", "admin"])
+    .order("display_name");
+  if (error) throw new Error(`Could not load users: ${error.message}`);
+  return data;
+}
