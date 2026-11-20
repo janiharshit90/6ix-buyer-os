@@ -37,6 +37,26 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"ai_calls": {
+                  Row: {
+                    "cache_creation_input_tokens": number | null,"cache_read_input_tokens": number | null,"cost_usd": number | null,"created_at": string,"created_by": string | null,"error_code": string | null,"error_message": string | null,"finished_at": string | null,"id": string,"input_tokens": number | null,"latency_ms": number | null,"model": string,"output_tokens": number | null,"price_version": string,"project_id": string | null,"prompt_version": string,"purpose": string,"request_id": string | null,"reserved_usd": number,"started_at": string,"status": Database["public"]['Enums']["ai_call_status"],"stop_reason": string | null,"subject_id": string | null,"subject_type": string | null,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cache_creation_input_tokens"?: number | null,"cache_read_input_tokens"?: number | null,"cost_usd"?: number | null,"created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number | null,"latency_ms"?: number | null,"model": string,"output_tokens"?: number | null,"price_version": string,"project_id"?: string | null,"prompt_version": string,"purpose": string,"request_id"?: string | null,"reserved_usd"?: number,"started_at"?: string,"status"?: Database["public"]['Enums']["ai_call_status"],"stop_reason"?: string | null,"subject_id"?: string | null,"subject_type"?: string | null,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "cache_creation_input_tokens"?: number | null,"cache_read_input_tokens"?: number | null,"cost_usd"?: number | null,"created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"finished_at"?: string | null,"id"?: string,"input_tokens"?: number | null,"latency_ms"?: number | null,"model"?: string,"output_tokens"?: number | null,"price_version"?: string,"project_id"?: string | null,"prompt_version"?: string,"purpose"?: string,"request_id"?: string | null,"reserved_usd"?: number,"started_at"?: string,"status"?: Database["public"]['Enums']["ai_call_status"],"stop_reason"?: string | null,"subject_id"?: string | null,"subject_type"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_calls_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"approvals": {
                   Row: {
                     "action": Database["public"]['Enums']["approval_action"],"at": string,"by": string,"created_at": string,"created_by": string | null,"entity_id": string,"entity_type": Database["public"]['Enums']["approval_entity"],"id": string,"note": string | null,"updated_at": string,"version": number
@@ -70,6 +90,64 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"budgets": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"monthly_cap_usd": number,"scope": Database["public"]['Enums']["budget_scope"],"scope_id": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"monthly_cap_usd": number,"scope": Database["public"]['Enums']["budget_scope"],"scope_id"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"monthly_cap_usd"?: number,"scope"?: Database["public"]['Enums']["budget_scope"],"scope_id"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "budgets_scope_id_fkey"
+      columns: ["scope_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"offer_ai_checks": {
+                  Row: {
+                    "ai_call_id": string,"ai_findings": NonNullable<Json>,"created_at": string,"created_by": string,"id": string,"model": string,"offer_version_id": string,"prompt_version": string,"rule_findings": NonNullable<Json>,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ai_call_id": string,"ai_findings": NonNullable<Json>,"created_at"?: string,"created_by": string,"id"?: string,"model": string,"offer_version_id": string,"prompt_version": string,"rule_findings": NonNullable<Json>,"updated_at"?: string
+                  }
+                  Update: {
+                    "ai_call_id"?: string,"ai_findings"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string,"id"?: string,"model"?: string,"offer_version_id"?: string,"prompt_version"?: string,"rule_findings"?: NonNullable<Json>,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "offer_ai_checks_ai_call_id_fkey"
+      columns: ["ai_call_id"]
+isOneToOne: true
+      referencedRelation: "ai_calls"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "offer_ai_checks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "offer_ai_checks_offer_version_id_fkey"
+      columns: ["offer_version_id"]
+isOneToOne: false
+      referencedRelation: "offer_versions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "offer_ai_checks_offer_version_id_fkey"
+      columns: ["offer_version_id"]
+isOneToOne: false
+      referencedRelation: "offer_versions_with_economics"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"offer_urls": {
                   Row: {
@@ -204,7 +282,21 @@ isOneToOne: false
                 }
           }
           Views: {
-            "offer_versions_with_economics": {
+            "ai_usage_monthly": {
+                  Row: {
+                    "blocked": number | null,"calls": number | null,"cost_usd": number | null,"failed": number | null,"input_tokens": number | null,"model": string,"month_start": string | null,"output_tokens": number | null,"pending": number | null,"purpose": string,"reserved_usd": number | null,"succeeded": number | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_calls_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"offer_versions_with_economics": {
                   Row: {
                     "approval_required": boolean | null,"approved_at": string | null,"approved_by": string | null,"call_hours": Json | null,"cap_amount": number | null,"cap_counts": Database["public"]['Enums']["cap_counts"] | null,"cap_period": Database["public"]['Enums']["cap_period"] | null,"created_at": string,"created_by": string | null,"feedback_delay_days": number | null,"id": string,"offer_id": string,"optimisation_event": string | null,"payout_model": Database["public"]['Enums']["payout_model"] | null,"payout_tiers": Json | null,"restrictions": Json | null,"states": (string)[] | null,"status": Database["public"]['Enums']["offer_version_status"],"target_cpl": number | null,"target_roi": number | null,"updated_at": string,"version": number
                   }
@@ -227,14 +319,23 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "approve_offer_version":
+            "ai_budget_status":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"approve_offer_version":
 { Args: { "p_note"?: string,"p_version_id": string }; Returns: string
+                           },
+"begin_ai_call":
+{ Args: { "p_model": string,"p_price_version": string,"p_project_id"?: string,"p_prompt_version": string,"p_purpose": string,"p_reserve_usd": number,"p_subject_id"?: string,"p_subject_type"?: string,"p_user_id": string }; Returns: Json
                            },
 "bootstrap_admin":
 { Args: { "target_user_id": string }; Returns: boolean
                            },
 "create_draft_from_approved":
 { Args: { "p_offer_id": string }; Returns: string
+                           },
+"finish_ai_call":
+{ Args: { "p_cache_creation"?: number,"p_cache_read"?: number,"p_call_id": string,"p_cost_usd": number,"p_error_code"?: string,"p_error_message"?: string,"p_input_tokens"?: number,"p_latency_ms"?: number,"p_model"?: string,"p_output_tokens"?: number,"p_request_id"?: string,"p_status": Database["public"]['Enums']["ai_call_status"],"p_stop_reason"?: string }; Returns: boolean
                            },
 "reassign_offer_owner":
 { Args: { "p_new_owner_id": string,"p_offer_id": string }; Returns: string
@@ -244,7 +345,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "app_role": "admin"|"manager"|"buyer"|"creative","approval_action": "approved"|"rejected"|"changes_requested","approval_entity": "offer_version","cap_counts": "submissions"|"qualified"|"billable"|"calls","cap_period": "day"|"week"|"month"|"total","offer_status": "active"|"paused"|"archived","offer_url_kind": "our_lander"|"offer_page"|"preview"|"competitor_lander"|"other","offer_version_status": "draft"|"approved","payout_model": "cpl"|"cpql"|"cpa"|"revshare"|"ppc"
+            "ai_call_status": "pending"|"succeeded"|"failed"|"blocked","app_role": "admin"|"manager"|"buyer"|"creative","approval_action": "approved"|"rejected"|"changes_requested","approval_entity": "offer_version","budget_scope": "workspace"|"user","cap_counts": "submissions"|"qualified"|"billable"|"calls","cap_period": "day"|"week"|"month"|"total","offer_status": "active"|"paused"|"archived","offer_url_kind": "our_lander"|"offer_page"|"preview"|"competitor_lander"|"other","offer_version_status": "draft"|"approved","payout_model": "cpl"|"cpql"|"cpa"|"revshare"|"ppc"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -364,7 +465,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "app_role": ["admin", "manager", "buyer", "creative"],"approval_action": ["approved", "rejected", "changes_requested"],"approval_entity": ["offer_version"],"cap_counts": ["submissions", "qualified", "billable", "calls"],"cap_period": ["day", "week", "month", "total"],"offer_status": ["active", "paused", "archived"],"offer_url_kind": ["our_lander", "offer_page", "preview", "competitor_lander", "other"],"offer_version_status": ["draft", "approved"],"payout_model": ["cpl", "cpql", "cpa", "revshare", "ppc"]
+            "ai_call_status": ["pending", "succeeded", "failed", "blocked"],"app_role": ["admin", "manager", "buyer", "creative"],"approval_action": ["approved", "rejected", "changes_requested"],"approval_entity": ["offer_version"],"budget_scope": ["workspace", "user"],"cap_counts": ["submissions", "qualified", "billable", "calls"],"cap_period": ["day", "week", "month", "total"],"offer_status": ["active", "paused", "archived"],"offer_url_kind": ["our_lander", "offer_page", "preview", "competitor_lander", "other"],"offer_version_status": ["draft", "approved"],"payout_model": ["cpl", "cpql", "cpa", "revshare", "ppc"]
           }
         }
 } as const
