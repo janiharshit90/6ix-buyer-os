@@ -144,8 +144,11 @@ describe("runStructured", () => {
 
     const error = await run(ledger, client).catch((e) => e);
     expect(error).toBeInstanceOf(AiBudgetExceededError);
-    expect(error.userMessage).toContain("$20.00");
-    expect(error.userMessage).toContain("November 2026");
+    // Workspace scope: no amounts (buyers never see team totals).
+    expect(error.userMessage).toBe(
+      "The team's monthly AI budget is used up. Ask an admin to raise it.",
+    );
+    expect(error.userMessage).not.toMatch(/\$|19\.99|20/);
     expect(error.retryable).toBe(false);
     expect(requests).toHaveLength(0);
     expect(finishes).toHaveLength(0);
@@ -275,5 +278,35 @@ describe("runStructured", () => {
     );
     expect(tags[0]).toBeDefined();
     expect(tags[0]).not.toBe(tags[1]);
+  });
+});
+
+describe("budgetMessage", () => {
+  it("a user's own cap names their own amounts", async () => {
+    const { budgetMessage } = await import("@/lib/ai/errors");
+    expect(
+      budgetMessage({
+        reason: "cap_reached",
+        scope: "user",
+        capUsd: 5,
+        spentUsd: 4.99,
+        monthStart: "2026-11-01T00:00:00Z",
+      }),
+    ).toBe(
+      "Your AI budget of $5.00 for November 2026 doesn't cover this call ($4.99 used or reserved). Ask an admin to raise it in Settings.",
+    );
+  });
+
+  it("no workspace cap: AI is off", async () => {
+    const { budgetMessage } = await import("@/lib/ai/errors");
+    expect(
+      budgetMessage({
+        reason: "no_workspace_budget",
+        scope: "workspace",
+        capUsd: null,
+        spentUsd: null,
+        monthStart: null,
+      }),
+    ).toMatch(/^AI is switched off/);
   });
 });

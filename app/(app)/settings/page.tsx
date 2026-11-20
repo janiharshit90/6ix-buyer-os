@@ -143,15 +143,23 @@ function BudgetSummary({ status }: { status: BudgetStatus }) {
           {status.user_cap_usd != null && ` of ${formatCapUsd(status.user_cap_usd)}`}
         </dd>
       </div>
-      <div>
-        <dt className="text-muted-foreground text-xs">Workspace spend</dt>
-        <dd>
-          {formatSpend(status.workspace_spent_usd)} of{" "}
-          {status.workspace_cap_usd == null
-            ? "no cap set (AI is off)"
-            : formatCapUsd(status.workspace_cap_usd)}
-        </dd>
-      </div>
+      {/* Workspace totals reach managers/admins only (NULL for others, enforced in SQL). */}
+      {status.workspace_spent_usd != null && (
+        <div>
+          <dt className="text-muted-foreground text-xs">Workspace spend</dt>
+          <dd>
+            {formatSpend(status.workspace_spent_usd)} of{" "}
+            {status.workspace_cap_usd == null
+              ? "no cap set (AI is off)"
+              : formatCapUsd(status.workspace_cap_usd)}
+          </dd>
+        </div>
+      )}
+      {status.workspace_spent_usd == null && !status.workspace_budget_available && (
+        <p role="status" className="col-span-2 text-amber-700 dark:text-amber-400">
+          The team&apos;s monthly AI budget is used up. Ask an admin to raise it.
+        </p>
+      )}
       <p className="text-muted-foreground col-span-2 text-xs">
         Includes reservations for calls in progress. Calls stop when a cap would be exceeded.
       </p>

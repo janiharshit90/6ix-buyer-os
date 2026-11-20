@@ -9,8 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 
 const budgetStatusSchema = z.object({
   month_start: z.string(),
+  /** Managers/admins only; NULL for everyone else (enforced in SQL). */
   workspace_cap_usd: z.number().nullable(),
-  workspace_spent_usd: z.number(),
+  workspace_spent_usd: z.number().nullable(),
+  workspace_budget_available: z.boolean(),
   user_cap_usd: z.number().nullable(),
   user_spent_usd: z.number(),
 });

@@ -47,15 +47,21 @@ const monthName = (iso: string | null) =>
       )
     : "this month";
 
-/** Numbers in the message come from the DB (begin_ai_call); code only formats them. */
+/**
+ * Numbers in the message come from the DB (begin_ai_call); code only formats them.
+ * The workspace message never states amounts: buyers don't see team totals (PR #12 review);
+ * managers and admins see them in Settings.
+ */
 export function budgetMessage(block: BudgetBlock): string {
   if (block.reason === "no_workspace_budget") {
     return "AI is switched off: no workspace AI budget is set. Ask an admin to set one in Settings.";
   }
-  const who = block.scope === "workspace" ? "The workspace" : "Your";
+  if (block.scope === "workspace") {
+    return "The team's monthly AI budget is used up. Ask an admin to raise it.";
+  }
   const cap = block.capUsd == null ? "" : ` of ${usd.format(block.capUsd)}`;
   const spent = block.spentUsd == null ? "" : ` (${usd.format(block.spentUsd)} used or reserved)`;
-  return `${who} AI budget${cap} for ${monthName(block.monthStart)} doesn't cover this call${spent}. Ask an admin to raise it in Settings.`;
+  return `Your AI budget${cap} for ${monthName(block.monthStart)} doesn't cover this call${spent}. Ask an admin to raise it in Settings.`;
 }
 
 export class AiBudgetExceededError extends AiError {

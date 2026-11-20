@@ -204,6 +204,12 @@ describe("clients can't reach the ledger", () => {
 
     const status = await asBuyer.rpc("ai_budget_status");
     expect(status.error).toBeNull();
-    expect(status.data).toMatchObject({ user_cap_usd: null });
+    // Buyers get their own spend, never the workspace total (enforced in SQL).
+    expect(status.data).toMatchObject({
+      user_cap_usd: null,
+      workspace_cap_usd: null,
+      workspace_spent_usd: null,
+      workspace_budget_available: true,
+    });
   });
 });

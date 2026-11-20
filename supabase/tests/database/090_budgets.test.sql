@@ -1,6 +1,6 @@
 -- Budgets: who can see/set caps, and cap enforcement in begin_ai_call (Decisions log, M2).
 begin;
-select plan(25);
+select plan(26);
 
 select tests.create_user('buyer_a', 'buyer', true);
 select tests.create_user('buyer_b', 'buyer', true);
@@ -157,9 +157,17 @@ insert into public.budgets (scope, scope_id, monthly_cap_usd) values ('workspace
 select tests.authenticate_as('buyer_a');
 select is(
   public.ai_budget_status() - 'month_start',
+  jsonb_build_object('workspace_cap_usd', null, 'workspace_spent_usd', null,
+    'workspace_budget_available', true, 'user_cap_usd', 1.00, 'user_spent_usd', 0.70),
+  'buyers get their own spend, never the workspace total'
+);
+reset role;
+select tests.authenticate_as('manager');
+select is(
+  public.ai_budget_status() - 'month_start',
   jsonb_build_object('workspace_cap_usd', 20.00, 'workspace_spent_usd', 1.90,
-    'user_cap_usd', 1.00, 'user_spent_usd', 0.70),
-  'ai_budget_status reports caps and month-to-date spend'
+    'workspace_budget_available', true, 'user_cap_usd', null, 'user_spent_usd', 1.20),
+  'managers see workspace totals'
 );
 reset role;
 select tests.clear_authentication();
