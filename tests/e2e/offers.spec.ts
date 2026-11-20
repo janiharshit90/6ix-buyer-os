@@ -51,6 +51,9 @@ async function approvedOfferViaApi(name: string) {
 }
 
 test("buyer intake → manager approves → editing creates v2", async ({ browser }) => {
+  // Two users, ~15 page loads: more than the 30s default allows under load. Assertions keep
+  // their normal (fast) timeouts.
+  test.setTimeout(60_000);
   const name = `E2E Offer ${crypto.randomUUID().slice(0, 6)}`;
   const buyer = await newUser("buyer");
   const manager = await newUser("manager");

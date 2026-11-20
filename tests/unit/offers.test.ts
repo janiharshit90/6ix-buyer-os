@@ -35,8 +35,8 @@ const filled: OfferDraft = {
   bannedWords: "free",
   restrictionNotes: "",
   urls: [
-    { url: " https://acme.example/lp ", kind: "our_lander" },
-    { url: "", kind: "other" },
+    { url: " https://acme.example/lp ", kind: "our_lander", notTrackingLink: false },
+    { url: "", kind: "other", notTrackingLink: false },
   ],
 };
 
@@ -68,7 +68,9 @@ describe("offer form schema", () => {
       banned_words: ["free"],
       notes: null,
     });
-    expect(parsed.urls).toEqual([{ url: "https://acme.example/lp", kind: "our_lander" }]);
+    expect(parsed.urls).toEqual([
+      { url: "https://acme.example/lp", kind: "our_lander", not_tracking_link: false },
+    ]);
     expect(parsed.economics.payoutTiers).toEqual([
       { label: "base", amount_usd: 35.5, condition: "call > 90s" },
     ]);
@@ -95,15 +97,18 @@ describe("offer form schema", () => {
 
   it("rejects non-http URLs and duplicates", () => {
     const js = offerFormSchema.safeParse(
-      toPayload({ ...filled, urls: [{ url: "javascript:alert(1)", kind: "other" }] }),
+      toPayload({
+        ...filled,
+        urls: [{ url: "javascript:alert(1)", kind: "other", notTrackingLink: false }],
+      }),
     );
     expect(js.success).toBe(false);
     const dup = offerFormSchema.safeParse(
       toPayload({
         ...filled,
         urls: [
-          { url: "https://a.example", kind: "our_lander" },
-          { url: "https://a.example", kind: "other" },
+          { url: "https://a.example", kind: "our_lander", notTrackingLink: false },
+          { url: "https://a.example", kind: "other", notTrackingLink: false },
         ],
       }),
     );
@@ -117,6 +122,24 @@ describe("offer form schema", () => {
       toPayload({ ...filled, days: { ...filled.days, tue: [{ start: "17:00", end: "09:00" }] } }),
     );
     expect(backwards.success).toBe(false);
+  });
+});
+
+describe("not a tracking link", () => {
+  it("is sent only for offer_page URLs", () => {
+    const parsed = offerFormSchema.parse(
+      toPayload({
+        ...filled,
+        urls: [
+          { url: "https://offer.example/direct", kind: "offer_page", notTrackingLink: true },
+          { url: "https://lander.example/", kind: "our_lander", notTrackingLink: true },
+        ],
+      }),
+    );
+    expect(parsed.urls.map((u) => [u.kind, u.not_tracking_link])).toEqual([
+      ["offer_page", true],
+      ["our_lander", false],
+    ]);
   });
 });
 

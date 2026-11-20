@@ -30,8 +30,10 @@ import {
 } from "@/lib/offers/queries";
 import { getLatestCheck } from "@/lib/offers/ai-check";
 import { missingFields, WEEKDAYS } from "@/lib/offers/schema";
+import { getActiveProjectId } from "@/lib/research/queries";
 
 import { MissingChecklist } from "../offer-form";
+import { StartResearchButton } from "../../research/controls";
 import { AiCheckButton, AiCheckResults } from "./ai-check";
 import {
   ApproveForm,
@@ -60,7 +62,6 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
   if (!offer) notFound();
 
   const versions = await getVersions(offerId, profile);
-  const approvals = await getApprovals(versions.map((x) => x.id));
   const draft = versions.find((x) => x.status === "draft");
   const current = versions.find((x) => x.id === offer.current_version_id);
   const requested =
@@ -70,10 +71,15 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
   const editable = canEditOffer(profile, offer);
   const showEconomics = canSeeEconomics(profile);
   const nextVersion = (versions[0]?.version ?? 0) + 1;
-  const assignableOwners = canApprove(profile) ? await listAssignableOwners() : [];
-  // Creatives never see checks (findings may mention economics); RLS enforces it too.
-  const latestCheck = shown && showEconomics ? await getLatestCheck(shown.id) : null;
   const canRunCheck = shown?.status === "draft" && editable && showEconomics;
+  // Independent reads, in parallel. Creatives never see checks or research (findings may
+  // mention economics); RLS enforces both too.
+  const [approvals, assignableOwners, latestCheck, activeProjectId] = await Promise.all([
+    getApprovals(versions.map((x) => x.id)),
+    canApprove(profile) ? listAssignableOwners() : Promise.resolve([]),
+    shown && showEconomics ? getLatestCheck(shown.id) : Promise.resolve(null),
+    showEconomics ? getActiveProjectId(offer.id) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -136,6 +142,22 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
           </Link>
         ))}
       </nav>
+
+      {shown && (editable || activeProjectId) && (
+        <section className="flex flex-wrap items-start gap-3" aria-label="Research">
+          {activeProjectId && (
+            <Link
+              href={`/research/${activeProjectId}`}
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Open research
+            </Link>
+          )}
+          {editable && shown.urls.length > 0 && (
+            <StartResearchButton versionId={shown.id} version={shown.version} />
+          )}
+        </section>
+      )}
 
       {shown && (canRunCheck || latestCheck) && (
         <section className="flex flex-col gap-2" aria-label="AI check">
@@ -360,6 +382,11 @@ function VersionFacts({
                 </Badge>
                 {/* Plain text, not a link: external pages are read by the fetcher, never clicked here. */}
                 {u.url}
+                {u.kind === "offer_page" && u.not_tracking_link && (
+                  <Badge variant="secondary" className="ml-2">
+                    not a tracking link
+                  </Badge>
+                )}
               </li>
             ))}
           </ul>

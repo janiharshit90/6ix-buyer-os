@@ -2,3 +2,7 @@ allowBuilds:
   sharp: false
   unrs-resolver: false
   supabase: true
+  # Downloads the Inngest dev-server binary (local dev + e2e only).
+  inngest-cli: true
+  # Optional native speedup pulled in by inngest; not needed.
+  protobufjs: false

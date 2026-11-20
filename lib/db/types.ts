@@ -111,6 +111,52 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"fetched_pages": {
+                  Row: {
+                    "attempts": number,"content_type": string | null,"created_at": string,"created_by": string | null,"error_code": string | null,"error_message": string | null,"fetch_status": Database["public"]['Enums']["fetch_status"],"fetched_at": string | null,"final_domain": string | null,"final_url": string | null,"form_domains": (string)[],"http_status": number | null,"id": string,"link_domains": (string)[],"not_tracking_link": boolean,"offer_url_id": string | null,"project_id": string,"redirect_chain": NonNullable<Json>,"requested_url": string,"screenshot_path": string | null,"signals": NonNullable<Json>,"site_name": string | null,"tel_numbers": (string)[],"text": string | null,"text_chars": number | null,"text_sha256": string | null,"title": string | null,"truncated": boolean,"updated_at": string,"url_kind": Database["public"]['Enums']["offer_url_kind"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attempts"?: number,"content_type"?: string | null,"created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"fetch_status"?: Database["public"]['Enums']["fetch_status"],"fetched_at"?: string | null,"final_domain"?: string | null,"final_url"?: string | null,"form_domains"?: (string)[],"http_status"?: number | null,"id"?: string,"link_domains"?: (string)[],"not_tracking_link"?: boolean,"offer_url_id"?: string | null,"project_id": string,"redirect_chain"?: NonNullable<Json>,"requested_url": string,"screenshot_path"?: string | null,"signals"?: NonNullable<Json>,"site_name"?: string | null,"tel_numbers"?: (string)[],"text"?: string | null,"text_chars"?: number | null,"text_sha256"?: string | null,"title"?: string | null,"truncated"?: boolean,"updated_at"?: string,"url_kind": Database["public"]['Enums']["offer_url_kind"]
+                  }
+                  Update: {
+                    "attempts"?: number,"content_type"?: string | null,"created_at"?: string,"created_by"?: string | null,"error_code"?: string | null,"error_message"?: string | null,"fetch_status"?: Database["public"]['Enums']["fetch_status"],"fetched_at"?: string | null,"final_domain"?: string | null,"final_url"?: string | null,"form_domains"?: (string)[],"http_status"?: number | null,"id"?: string,"link_domains"?: (string)[],"not_tracking_link"?: boolean,"offer_url_id"?: string | null,"project_id"?: string,"redirect_chain"?: NonNullable<Json>,"requested_url"?: string,"screenshot_path"?: string | null,"signals"?: NonNullable<Json>,"site_name"?: string | null,"tel_numbers"?: (string)[],"text"?: string | null,"text_chars"?: number | null,"text_sha256"?: string | null,"title"?: string | null,"truncated"?: boolean,"updated_at"?: string,"url_kind"?: Database["public"]['Enums']["offer_url_kind"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fetched_pages_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "research_projects"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"fingerprints": {
+                  Row: {
+                    "advertiser": NonNullable<Json>,"ai_call_id": string | null,"brand": NonNullable<Json>,"claims": NonNullable<Json>,"confidence": Database["public"]['Enums']["fingerprint_confidence"],"created_at": string,"created_by": string | null,"domains": NonNullable<Json>,"dropped_items": number,"id": string,"model": string | null,"open_questions": NonNullable<Json>,"page_ids": (string)[],"phones": NonNullable<Json>,"phrases": NonNullable<Json>,"product": NonNullable<Json>,"project_id": string,"prompt_version": string,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "advertiser"?: NonNullable<Json>,"ai_call_id"?: string | null,"brand"?: NonNullable<Json>,"claims"?: NonNullable<Json>,"confidence": Database["public"]['Enums']["fingerprint_confidence"],"created_at"?: string,"created_by"?: string | null,"domains"?: NonNullable<Json>,"dropped_items"?: number,"id"?: string,"model"?: string | null,"open_questions"?: NonNullable<Json>,"page_ids"?: (string)[],"phones"?: NonNullable<Json>,"phrases"?: NonNullable<Json>,"product"?: NonNullable<Json>,"project_id": string,"prompt_version": string,"updated_at"?: string,"version": number
+                  }
+                  Update: {
+                    "advertiser"?: NonNullable<Json>,"ai_call_id"?: string | null,"brand"?: NonNullable<Json>,"claims"?: NonNullable<Json>,"confidence"?: Database["public"]['Enums']["fingerprint_confidence"],"created_at"?: string,"created_by"?: string | null,"domains"?: NonNullable<Json>,"dropped_items"?: number,"id"?: string,"model"?: string | null,"open_questions"?: NonNullable<Json>,"page_ids"?: (string)[],"phones"?: NonNullable<Json>,"phrases"?: NonNullable<Json>,"product"?: NonNullable<Json>,"project_id"?: string,"prompt_version"?: string,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fingerprints_ai_call_id_fkey"
+      columns: ["ai_call_id"]
+isOneToOne: false
+      referencedRelation: "ai_calls"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "fingerprints_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "research_projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"offer_ai_checks": {
                   Row: {
                     "ai_call_id": string,"ai_findings": NonNullable<Json>,"created_at": string,"created_by": string,"id": string,"model": string,"offer_version_id": string,"prompt_version": string,"rule_findings": NonNullable<Json>,"updated_at": string
@@ -151,14 +197,14 @@ isOneToOne: false
                   ]
                 },"offer_urls": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["offer_url_kind"],"offer_version_id": string,"updated_at": string,"url": string
+                    "created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["offer_url_kind"],"not_tracking_link": boolean,"offer_version_id": string,"updated_at": string,"url": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["offer_url_kind"],"offer_version_id": string,"updated_at"?: string,"url": string
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["offer_url_kind"],"not_tracking_link"?: boolean,"offer_version_id": string,"updated_at"?: string,"url": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["offer_url_kind"],"offer_version_id"?: string,"updated_at"?: string,"url"?: string
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["offer_url_kind"],"not_tracking_link"?: boolean,"offer_version_id"?: string,"updated_at"?: string,"url"?: string
                   }
                   Relationships: [
                     {
@@ -279,6 +325,38 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"research_projects": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"current_fingerprint_id": string | null,"fingerprint_error": string | null,"fingerprint_status": Database["public"]['Enums']["fingerprint_run_status"],"id": string,"offer_id": string,"offer_version_id": string,"owner_id": string,"status": Database["public"]['Enums']["research_project_status"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"current_fingerprint_id"?: string | null,"fingerprint_error"?: string | null,"fingerprint_status"?: Database["public"]['Enums']["fingerprint_run_status"],"id"?: string,"offer_id": string,"offer_version_id": string,"owner_id": string,"status"?: Database["public"]['Enums']["research_project_status"],"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"current_fingerprint_id"?: string | null,"fingerprint_error"?: string | null,"fingerprint_status"?: Database["public"]['Enums']["fingerprint_run_status"],"id"?: string,"offer_id"?: string,"offer_version_id"?: string,"owner_id"?: string,"status"?: Database["public"]['Enums']["research_project_status"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "research_projects_current_fingerprint_fkey"
+      columns: ["current_fingerprint_id"]
+isOneToOne: false
+      referencedRelation: "fingerprints"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "research_projects_offer_id_fkey"
+      columns: ["offer_id"]
+isOneToOne: false
+      referencedRelation: "offers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "research_projects_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -331,6 +409,9 @@ isOneToOne: false
 "bootstrap_admin":
 { Args: { "target_user_id": string }; Returns: boolean
                            },
+"can_edit_research_project":
+{ Args: { "p_project_id": string }; Returns: boolean
+                           },
 "create_draft_from_approved":
 { Args: { "p_offer_id": string }; Returns: string
                            },
@@ -340,12 +421,18 @@ isOneToOne: false
 "reassign_offer_owner":
 { Args: { "p_new_owner_id": string,"p_offer_id": string }; Returns: string
                            },
+"retry_fetched_page":
+{ Args: { "p_page_id": string }; Returns: string
+                           },
 "save_offer_draft":
 { Args: { "p_economics"?: Json,"p_offer"?: Json,"p_offer_id"?: string,"p_urls"?: Json,"p_version"?: Json }; Returns: Json
+                           },
+"start_research":
+{ Args: { "p_offer_version_id": string }; Returns: Json
                            }
           }
           Enums: {
-            "ai_call_status": "pending"|"succeeded"|"failed"|"blocked","app_role": "admin"|"manager"|"buyer"|"creative","approval_action": "approved"|"rejected"|"changes_requested","approval_entity": "offer_version","budget_scope": "workspace"|"user","cap_counts": "submissions"|"qualified"|"billable"|"calls","cap_period": "day"|"week"|"month"|"total","offer_status": "active"|"paused"|"archived","offer_url_kind": "our_lander"|"offer_page"|"preview"|"competitor_lander"|"other","offer_version_status": "draft"|"approved","payout_model": "cpl"|"cpql"|"cpa"|"revshare"|"ppc"
+            "ai_call_status": "pending"|"succeeded"|"failed"|"blocked","app_role": "admin"|"manager"|"buyer"|"creative","approval_action": "approved"|"rejected"|"changes_requested","approval_entity": "offer_version","budget_scope": "workspace"|"user","cap_counts": "submissions"|"qualified"|"billable"|"calls","cap_period": "day"|"week"|"month"|"total","fetch_status": "pending"|"fetching"|"fetched"|"failed"|"blocked"|"needs_render"|"tracking_link"|"skipped","fingerprint_confidence": "high"|"medium"|"low","fingerprint_run_status": "idle"|"running"|"failed"|"done","offer_status": "active"|"paused"|"archived","offer_url_kind": "our_lander"|"offer_page"|"preview"|"competitor_lander"|"other","offer_version_status": "draft"|"approved","payout_model": "cpl"|"cpql"|"cpa"|"revshare"|"ppc","research_project_status": "active"|"archived"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -465,7 +552,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "ai_call_status": ["pending", "succeeded", "failed", "blocked"],"app_role": ["admin", "manager", "buyer", "creative"],"approval_action": ["approved", "rejected", "changes_requested"],"approval_entity": ["offer_version"],"budget_scope": ["workspace", "user"],"cap_counts": ["submissions", "qualified", "billable", "calls"],"cap_period": ["day", "week", "month", "total"],"offer_status": ["active", "paused", "archived"],"offer_url_kind": ["our_lander", "offer_page", "preview", "competitor_lander", "other"],"offer_version_status": ["draft", "approved"],"payout_model": ["cpl", "cpql", "cpa", "revshare", "ppc"]
+            "ai_call_status": ["pending", "succeeded", "failed", "blocked"],"app_role": ["admin", "manager", "buyer", "creative"],"approval_action": ["approved", "rejected", "changes_requested"],"approval_entity": ["offer_version"],"budget_scope": ["workspace", "user"],"cap_counts": ["submissions", "qualified", "billable", "calls"],"cap_period": ["day", "week", "month", "total"],"fetch_status": ["pending", "fetching", "fetched", "failed", "blocked", "needs_render", "tracking_link", "skipped"],"fingerprint_confidence": ["high", "medium", "low"],"fingerprint_run_status": ["idle", "running", "failed", "done"],"offer_status": ["active", "paused", "archived"],"offer_url_kind": ["our_lander", "offer_page", "preview", "competitor_lander", "other"],"offer_version_status": ["draft", "approved"],"payout_model": ["cpl", "cpql", "cpa", "revshare", "ppc"],"research_project_status": ["active", "archived"]
           }
         }
 } as const

@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type OfferVersion = Tables<"offer_versions">;
 export type OfferVersionWithEconomics = Tables<"offer_versions_with_economics">;
-export type OfferUrl = Pick<Tables<"offer_urls">, "id" | "url" | "kind">;
+export type OfferUrl = Pick<Tables<"offer_urls">, "id" | "url" | "kind" | "not_tracking_link">;
 export type Economics = Pick<
   Tables<"offer_version_economics">,
   "payout_tiers" | "target_cpl" | "target_roi"
@@ -93,7 +93,7 @@ export async function getVersions(
   const ids = versions.map((v) => v.id);
   const { data: urls, error: urlError } = await supabase
     .from("offer_urls")
-    .select("id, url, kind, offer_version_id")
+    .select("id, url, kind, not_tracking_link, offer_version_id")
     .in("offer_version_id", ids)
     .order("created_at");
   if (urlError) throw new Error(`Could not load offer URLs: ${urlError.message}`);
@@ -113,7 +113,7 @@ export async function getVersions(
     economics: economics.get(v.id) ?? null,
     urls: urls
       .filter((u) => u.offer_version_id === v.id)
-      .map(({ id, url, kind }) => ({ id, url, kind })),
+      .map(({ id, url, kind, not_tracking_link }) => ({ id, url, kind, not_tracking_link })),
   }));
 }
 

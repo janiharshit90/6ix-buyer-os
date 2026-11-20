@@ -6,5 +6,5 @@ export type VersionViewLike = Tables<"offer_versions"> & {
     Tables<"offer_version_economics">,
     "payout_tiers" | "target_cpl" | "target_roi"
   > | null;
-  urls: Pick<Tables<"offer_urls">, "url" | "kind">[];
+  urls: Pick<Tables<"offer_urls">, "url" | "kind" | "not_tracking_link">[];
 };

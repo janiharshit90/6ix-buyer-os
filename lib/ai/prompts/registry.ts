@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
+import { fingerprintV1 } from "./fingerprint/v1";
 import { offerCheckV1 } from "./offer-check/v1";
 import { promptId, type PromptDefinition } from "./types";
 
@@ -32,4 +33,4 @@ const entry = <I, O>(p: PromptDefinition<I, O>) => ({
 });
 
 /** Every released prompt version. Each must have a frozen fingerprint in prompts/hashes.json. */
-export const RELEASED_PROMPTS = [entry(offerCheckV1)];
+export const RELEASED_PROMPTS = [entry(offerCheckV1), entry(fingerprintV1)];

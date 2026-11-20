@@ -39,7 +39,7 @@ export type OfferDraft = {
   bannedClaims: string;
   bannedWords: string;
   restrictionNotes: string;
-  urls: { url: string; kind: (typeof OFFER_URL_KINDS)[number] }[];
+  urls: { url: string; kind: (typeof OFFER_URL_KINDS)[number]; notTrackingLink: boolean }[];
 };
 
 export const EMPTY_DRAFT: OfferDraft = {
@@ -66,7 +66,7 @@ export const EMPTY_DRAFT: OfferDraft = {
   bannedClaims: "",
   bannedWords: "",
   restrictionNotes: "",
-  urls: [{ url: "", kind: "our_lander" }],
+  urls: [{ url: "", kind: "our_lander", notTrackingLink: false }],
 };
 
 const orNull = (s: string) => (s.trim() === "" ? null : s.trim());
@@ -129,7 +129,12 @@ export function toPayload(d: OfferDraft): OfferFormInput {
     },
     urls: d.urls
       .filter((u) => u.url.trim() !== "")
-      .map((u) => ({ url: u.url.trim(), kind: u.kind })),
+      .map((u) => ({
+        url: u.url.trim(),
+        kind: u.kind,
+        // Only meaningful for offer pages; other kinds are fetched by default.
+        not_tracking_link: u.kind === "offer_page" && u.notTrackingLink,
+      })),
   };
 }
 
@@ -221,6 +226,6 @@ export function draftFromVersion(
     bannedClaims: restrictions ? strArray(restrictions.banned_claims).join("\n") : "",
     bannedWords: restrictions ? strArray(restrictions.banned_words).join("\n") : "",
     restrictionNotes: restrictions ? str(restrictions.notes) : "",
-    urls: v.urls.map((u) => ({ url: u.url, kind: u.kind })),
+    urls: v.urls.map((u) => ({ url: u.url, kind: u.kind, notTrackingLink: u.not_tracking_link })),
   };
 }

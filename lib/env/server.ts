@@ -62,3 +62,19 @@ export function getAiEnv(source: NodeJS.ProcessEnv = process.env): AiEnv {
   if (!result.success) throw new Error(formatEnvError(result.error));
   return result.data;
 }
+
+/**
+ * Direct Postgres URL for background jobs (lib/db/as-user.ts). TOP-TIER SECRET: server-only,
+ * never logged, never sent to the client (the CI bundle canary greps for it). On Vercel this
+ * is the Supabase transaction-pooler URL (port 6543).
+ */
+export function getDatabaseUrl(source: NodeJS.ProcessEnv = process.env): string {
+  const result = z.string().trim().startsWith("postgres").safeParse(source.DATABASE_URL);
+  if (!result.success) {
+    // Names the variable, never echoes its value.
+    throw new Error(
+      "Missing or invalid DATABASE_URL (see .env.example): required for background jobs.",
+    );
+  }
+  return result.data;
+}

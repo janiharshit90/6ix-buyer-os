@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/db/types";
 
-type LocalStack = { url: string; publishableKey: string; secretKey: string };
+type LocalStack = { url: string; publishableKey: string; secretKey: string; dbUrl: string };
 
 let stack: LocalStack | undefined;
 
@@ -28,7 +28,9 @@ export function localStack(): LocalStack {
   if (!url || !publishableKey || !secretKey) {
     throw new Error("`supabase status` didn't return API_URL and keys.");
   }
-  stack = { url, publishableKey, secretKey };
+  const dbUrl = status.DB_URL;
+  if (!dbUrl) throw new Error("`supabase status` didn't return DB_URL.");
+  stack = { url, publishableKey, secretKey, dbUrl };
   return stack;
 }
 

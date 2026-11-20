@@ -52,6 +52,23 @@ unless you set `E2E_PROD=1`.
 - Local dev without a key: set `AI_FAKE=1` for a canned model (refused in production).
 - Budgets: workspace cap (seeded $20) + optional per-user caps, set by admins in Settings.
 
+## Research: fetcher + background jobs (M3)
+
+- **Jobs** run on Inngest (`lib/jobs/`, served at `/api/inngest`). Every step acts **as the user** inside
+  Postgres (`lib/db/as-user.ts`: `set local role authenticated` + JWT claims), so RLS applies to the job too.
+  Job payloads carry ids only. `fetched_pages` and `fingerprints` are writable only inside a job.
+- **Locally:** set `DATABASE_URL` (the `DB_URL` from `pnpm exec supabase status`) and `INNGEST_DEV=1` in
+  `.env.local`, run `pnpm dev`, and in a second terminal `pnpm inngest:dev` (dashboard at http://localhost:8288).
+- **Fetcher** (`lib/fetcher/`): plain HTTP only, no browser. SSRF rules on every hop (no internal/metadata
+  addresses, http(s) on 80/443 only, ≤5 redirects incl. meta refresh, 15 s, 3 MB, HTML/text only), GET with an
+  honest user agent, forms never submitted, nothing executed. Known tracker domains
+  (`lib/fetcher/trackers.ts`) are never fetched; `offer_page` URLs only when marked "not a tracking link".
+- **Fingerprint** (`fingerprint@1`, Sonnet): every item quotes its page and code drops items whose quote isn't on
+  that page; phones, domains and confidence come from code.
+- **Tests** never touch the network: the fetcher's unit tests use a local server reached through an explicit
+  test-host mapping, and e2e uses `FETCHER_TEST_HOSTS` (`.test` names → loopback, refused on Vercel) plus the
+  Inngest dev server and the Anthropic stub.
+
 ## Database
 
 - Change the schema only through migrations in `supabase/migrations/` (`pnpm exec supabase migration new <name>`).

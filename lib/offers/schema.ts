@@ -90,6 +90,8 @@ export const offerUrlSchema = z.object({
     .max(2048, "URL too long.")
     .pipe(z.url({ protocol: /^https?$/, error: "Enter a full http(s) URL." })),
   kind: z.enum(OFFER_URL_KINDS),
+  /** Buyer confirms an offer_page URL is a direct page, not a tracking link (OK to fetch). */
+  not_tracking_link: z.boolean().default(false),
 });
 
 export const offerFormSchema = z.object({

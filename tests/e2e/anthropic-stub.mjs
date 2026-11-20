@@ -15,6 +15,7 @@ function promptIdFor(params) {
     ? params.system.map((b) => b.text ?? "").join("\n")
     : String(params.system ?? "");
   if (system.includes("You review offer intake records")) return "offer-check@1";
+  if (system.includes("You extract a factual fingerprint of an offer")) return "fingerprint@1";
   return "unknown@0";
 }
 

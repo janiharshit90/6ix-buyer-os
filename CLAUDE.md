@@ -99,7 +99,7 @@ Work in this order. Each milestone ends with tests passing and a short note in t
 - **M2 — AI service:** `lib/ai/` wrapper, structured outputs, ai_calls logging, budgets + cap enforcement, prompt-injection guard for untrusted content.
 - **M3 — Fetcher + fingerprint:** `lib/fetcher/`, Inngest job, fetched_pages, fingerprints, project view.
 - **M4 — Knowledge upload:** upload docx/pdf/md, chunk with refs, embed, search.
-- **WAIT** for survey results before M5+ (brief layout, research screen, angle/script defaults, extension).
+- **M5+** follows M4 directly, built on sensible defaults (brief layout, research screen, angle/script defaults, extension). Survey feedback adjusts those defaults later; it doesn't block the build.
 
 ## 8. Code conventions
 
@@ -179,3 +179,16 @@ Append one line per decision: date — decision — why.
 - 2026-11-20 — M2 done: `lib/ai/` runner + ledger + budgets, offer AI check, Settings usage/caps; pgTAP, unit, integration and e2e green with a fake model; live smoke test opt-in and not yet run (API key has no credits).
 - 2026-11-20 — PR #12 review: buyers and creatives never see the workspace's total AI spend — `ai_budget_status` returns it to managers/admins only (NULL otherwise, in SQL); the workspace-cap error is a plain "team's monthly AI budget is used up — ask an admin" for everyone. Users still see their own spend and cap.
 - 2026-11-20 — E2E: CI runs Playwright against a production build (`next build` + `next start`) with default timeouts; local default stays `next dev` with 15s/60s (`E2E_PROD=1` to run prod locally). The app reaches a local Anthropic stub through the real SDK (`ANTHROPIC_BASE_URL`), since AI_FAKE is refused in production. Replaces the earlier "Playwright: 15s/60s" line for CI.
+- 2026-11-20 — Not waiting for the survey: M5+ proceeds right after M4 with sensible defaults (brief layout, research screen, angle/script defaults, extension); survey feedback adjusts them later. Replaces "WAIT for survey results before M5+" in §7 and the 2026-10-10 "M5+ waits for survey" line — speed; the defaults are cheap to change.
+- 2026-11-20 — M3: research may start on a DRAFT offer version and is pinned to that version (`research_projects.offer_version_id`) — speed; the facts it used stay traceable.
+- 2026-11-20 — Rule for M5: a research brief can only be approved if the offer version it was researched from is approved — no approved brief on unapproved offer facts.
+- 2026-11-20 — M3: one active research project per offer; re-fetching and re-running add new fingerprint versions — one place to look per offer.
+- 2026-11-20 — M3: fetch policy to avoid registering affiliate clicks: our_lander, competitor_lander and preview URLs are fetched by default; offer_page only when the buyer ticks "not a tracking link" on that URL (`offer_urls.not_tracking_link`, versioned with the offer); known tracker/redirect domains (list in `lib/fetcher/trackers.ts`) are always refused with status `tracking_link` — never fetched, even as a redirect hop.
+- 2026-11-20 — M3: the fetcher uses an honest user agent (`6ixBuyerOS-Fetcher/1.0`), never a disguise (§9); pages that look like a cloaked "safe page" (including our own lander) add an open question asking the buyer to paste the direct money-page URL.
+- 2026-11-20 — M3: no robots.txt check — we fetch single pages a person pasted, never crawl.
+- 2026-11-20 — M3: fingerprint = Sonnet 5.5 (generation tier); every AI item carries a verbatim quote and its page, and code drops any item whose quote isn't found in that page's text; phones and domains are extracted by code; confidence (`high|medium|low`) is computed by code from corroborating pages — never a number from the model (Non-negotiable #5).
+- 2026-11-20 — M3: `fetched_pages` and `fingerprints` are writable only inside a job transaction (`app.writer = 'job'`, which PostgREST clients can't set), still under the user's RLS — users can't forge source text through the API.
+- 2026-11-20 — M3: no paid renderer yet — plain fetch only; script-heavy pages with little text are marked `needs_render` so we can measure how often a renderer (e.g. Firecrawl) would help before buying one.
+- 2026-11-20 — M3: e2e fetches a local fixture server through `FETCHER_TEST_HOSTS` (maps reserved `.test` names only), which refuses to load when `VERCEL_ENV` is set — SSRF rules stay strict everywhere real.
+- 2026-11-20 — Local e2e in dev mode runs 2 Playwright workers — `next dev` + the Inngest dev server + browsers saturated the laptop; CI (production build) keeps Playwright's defaults.
+- 2026-11-20 — M3 done: SSRF-safe plain fetcher, Inngest research job acting as the user, research_projects/fetched_pages/fingerprints with job-only writes, fingerprint@1 with code-verified quotes, offer → "Start research" → per-URL status + Retry + fingerprint view. pgTAP, unit, integration and e2e green with fixtures, the Inngest dev server and the Anthropic stub; no real network or API calls in CI.
