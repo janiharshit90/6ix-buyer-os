@@ -86,3 +86,67 @@ unless you set `E2E_PROD=1`.
 5. Before team rollout: custom SMTP (see Decisions log).
 6. Set `ANTHROPIC_API_KEY` (one key per environment, with a Console spend limit) and check the
    workspace AI cap in Settings.
+
+## Deploying to Vercel
+
+Each Vercel project points at one hosted Supabase project (dev or prod). Never put hosted keys in
+`.env.local`, and never print them.
+
+### 1. Supabase first
+
+- Check every migration is applied: `pnpm exec supabase migration list --remote` (local and remote
+  columns must match).
+- Run the hosted checklist above. Email links use `{{ .SiteURL }}`, so the **Site URL must be the
+  Vercel production URL**, e.g. `https://<project>.vercel.app` (no trailing slash). Add
+  `https://<project>.vercel.app/auth/callback` to Redirect URLs.
+- Preview deployments: email links always land on the Site URL, so sign-in via email doesn't work
+  on previews. To use previews (e.g. with Google sign-in), add a wildcard redirect URL like
+  `https://<project>-*-<team>.vercel.app/**` and set the env vars on the Preview environment too.
+
+### 2. Vercel project settings
+
+- Build → Node.js Version: **24.x**.
+- Environment variables (Production):
+
+| Name                                   | Visibility                  | Notes                                                        |
+| -------------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`             | public (inlined at build)   |                                                              |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public (inlined at build)   | publishable key, not the secret key                          |
+| `NEXT_PUBLIC_SITE_URL`                 | public (inlined at build)   | the Vercel production URL, no trailing slash                 |
+| `SUPABASE_SECRET_KEY`                  | server-only, mark Sensitive |                                                              |
+| `BOOTSTRAP_ADMIN_EMAIL`                | server-only                 | needed until the first admin signs in (`/auth/callback`)     |
+| `ANTHROPIC_API_KEY`                    | server-only, mark Sensitive | unset = AI features show "AI is not configured"              |
+| `ENABLE_EXPERIMENTAL_COREPACK` = `1`   | build setting               | uses the pnpm version pinned in `packageManager`, as CI does |
+
+- **Never set** on Vercel: `AI_FAKE`, `ANTHROPIC_BASE_URL`, `AI_LIVE_TESTS`, `E2E_PROD`,
+  `ANTHROPIC_STUB_PORT`. Leave `AI_MODEL_GENERATION` / `AI_MODEL_CLASSIFICATION` unset unless you
+  mean to override `lib/ai/config.ts`.
+- Changing a `NEXT_PUBLIC_*` value needs a redeploy (it's baked into the build).
+
+### 3. First admin (no hosted keys on your machine)
+
+1. Deploy with `BOOTSTRAP_ADMIN_EMAIL` set, and set the Supabase Site URL (step 1).
+2. Supabase dashboard → Authentication → Users → **Invite user** with that same email.
+3. Open the invite link: `/auth/callback` on Vercel makes you the active admin (only while no
+   active admin exists).
+4. Optional: remove `BOOTSTRAP_ADMIN_EMAIL` from Vercel and redeploy.
+
+Alternative: `node scripts/invite-bootstrap-admin.mts` with the four variables it needs entered in a
+single PowerShell session (`Read-Host -MaskInput` for the secret key, then `Remove-Item Env:...`),
+so nothing is written to disk or shell history.
+
+### 4. Verify after deploy
+
+- [ ] The Vercel URL redirects to `/login`. The invite email arrives and links to the Vercel domain,
+      not localhost.
+- [ ] The admin lands on `/offers`; Settings shows Users and AI usage ($0.00 of the workspace cap).
+- [ ] An uninvited email gets "not invited", not an account.
+- [ ] An invited user lands on `/pending` until an admin activates them.
+- [ ] Buyer vs creative: a buyer's draft is invisible to a creative; after approval the creative sees
+      the offer without payout tiers, Target CPL or ROI, and has no "New offer" button. A buyer has
+      no Approve button, even on their own offer.
+- [ ] Offer flow: create → admin/manager approves v1 → "Edit (creates draft v2)" → save; v1 stays
+      approved and read-only.
+- [ ] AI check (needs `ANTHROPIC_API_KEY` with credits): "AI check v1" on a draft shows "Rule
+      check" and "AI suggestions"; failures show an error with Retry and change nothing.
+- [ ] Settings: the buyer sees only their own spend; admins and managers see team usage.
