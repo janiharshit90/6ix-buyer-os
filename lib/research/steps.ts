@@ -46,7 +46,7 @@ export async function pendingPageIds(userId: string, projectId: string): Promise
       select p.id from public.fetched_pages p
       join public.research_projects r on r.id = p.project_id
       where p.project_id = ${projectId} and p.fetch_status = 'pending' and r.status = 'active'
-      order by p.created_at`;
+      order by p.url_kind, p.requested_url`; // our_lander first (enum order); deterministic
     return rows.map((r) => r.id);
   });
 }
@@ -147,7 +147,7 @@ export async function fingerprintProject(
       select id, url_kind, requested_url, final_url, final_domain, redirect_chain, title, site_name,
              coalesce(text, '') as text, link_domains, form_domains, tel_numbers,
              coalesce((signals ->> 'form_count')::int, 0) as form_count, fetch_status, truncated
-      from public.fetched_pages where project_id = ${projectId} order by created_at`;
+      from public.fetched_pages where project_id = ${projectId} order by url_kind, requested_url`;
     await tx`update public.research_projects
       set fingerprint_status = 'running', fingerprint_error = null where id = ${projectId}`;
     return { project, pages };
