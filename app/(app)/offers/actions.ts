@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireActiveProfile } from "@/lib/auth/current-profile";
+import { runOfferCheck } from "@/lib/offers/ai-check";
 import { offerFormSchema, toSaveDraftArgs } from "@/lib/offers/schema";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,6 +17,8 @@ export type FormState = {
   status: "idle" | "ok" | "error";
   message?: string;
   issues?: { path: string; message: string }[];
+  /** Whether trying again can help (shows a Retry button). */
+  retryable?: boolean;
 };
 
 /** Turns DB errors into something a buyer can act on (no SQL internals). */
@@ -155,4 +158,23 @@ export async function reassignOfferOwner(_prev: FormState, formData: FormData): 
   revalidatePath("/offers");
   revalidatePath(`/offers/${parsed.data.offerId}`);
   return { status: "ok", message: "Owner changed." };
+}
+
+/**
+ * AI check of the saved draft: code rules + AI suggestions, stored in offer_ai_checks.
+ * Never edits the offer. Short (seconds), so it runs here rather than in a background job.
+ */
+export async function runAiCheck(_prev: FormState, formData: FormData): Promise<FormState> {
+  const profile = await requireActiveProfile();
+  const parsed = versionSchema.safeParse({
+    offerId: formData.get("offerId"),
+    versionId: formData.get("versionId"),
+  });
+  if (!parsed.success) return { status: "error", message: "Invalid draft.", retryable: false };
+
+  const result = await runOfferCheck(profile, parsed.data.offerId, parsed.data.versionId);
+  if (!result.ok) return { status: "error", message: result.message, retryable: result.retryable };
+
+  revalidatePath(`/offers/${parsed.data.offerId}`);
+  return { status: "ok", message: "AI check finished." };
 }

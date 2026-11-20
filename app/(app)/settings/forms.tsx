@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_ROLES, type AppRole } from "@/lib/db/roles";
 
-import { inviteUser, updateDisplayName, updateUserAccess, type ActionState } from "./actions";
+import {
+  inviteUser,
+  setUserCap,
+  setWorkspaceCap,
+  updateDisplayName,
+  updateUserAccess,
+  type ActionState,
+} from "./actions";
 
 const IDLE: ActionState = { status: "idle" };
 
@@ -97,6 +104,59 @@ export function UserAccessForm({
       </select>
       <Button type="submit" size="sm" variant="outline" disabled={pending}>
         Save
+      </Button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function WorkspaceCapForm({ capUsd }: { capUsd: number | null }) {
+  const [state, action, pending] = useActionState(setWorkspaceCap, IDLE);
+  return (
+    <form action={action} className="flex max-w-md flex-col gap-2">
+      <Label htmlFor="workspaceCap">Workspace monthly cap (USD)</Label>
+      <div className="flex gap-2">
+        <Input
+          id="workspaceCap"
+          name="capUsd"
+          inputMode="decimal"
+          defaultValue={capUsd == null ? "" : capUsd.toFixed(2)}
+          placeholder="20.00"
+          required
+          className="w-32"
+        />
+        <Button type="submit" disabled={pending}>
+          Save
+        </Button>
+      </div>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function UserCapForm({
+  userId,
+  displayName,
+  capUsd,
+}: {
+  userId: string;
+  displayName: string;
+  capUsd: number | null;
+}) {
+  const [state, action, pending] = useActionState(setUserCap, IDLE);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="userId" value={userId} />
+      <Input
+        name="capUsd"
+        aria-label={`Monthly AI cap for ${displayName} (USD, blank = none)`}
+        inputMode="decimal"
+        defaultValue={capUsd == null ? "" : capUsd.toFixed(2)}
+        placeholder="none"
+        className="h-8 w-24"
+      />
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        Set
       </Button>
       <Feedback state={state} />
     </form>

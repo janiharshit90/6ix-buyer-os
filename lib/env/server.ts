@@ -29,3 +29,36 @@ export function getServerEnv(): ServerEnv {
   cached = result.data;
   return cached;
 }
+
+const optionalString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().min(1).optional(),
+);
+
+/**
+ * AI settings. Separate from getServerEnv so the app runs without an Anthropic key:
+ * AI features then fail clearly ("AI is not configured") instead of the whole app failing.
+ */
+export const aiEnvSchema = z.object({
+  ANTHROPIC_API_KEY: optionalString,
+  AI_MODEL_GENERATION: optionalString,
+  AI_MODEL_CLASSIFICATION: optionalString,
+  // Dev/test only: a canned in-process model. Refused when NODE_ENV=production.
+  AI_FAKE: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() === "1" : false),
+    z.boolean(),
+  ),
+});
+
+export type AiEnv = z.infer<typeof aiEnvSchema>;
+
+export function getAiEnv(source: NodeJS.ProcessEnv = process.env): AiEnv {
+  const result = aiEnvSchema.safeParse({
+    ANTHROPIC_API_KEY: source.ANTHROPIC_API_KEY,
+    AI_MODEL_GENERATION: source.AI_MODEL_GENERATION,
+    AI_MODEL_CLASSIFICATION: source.AI_MODEL_CLASSIFICATION,
+    AI_FAKE: source.AI_FAKE,
+  });
+  if (!result.success) throw new Error(formatEnvError(result.error));
+  return result.data;
+}

@@ -28,6 +28,8 @@ jobs:
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       SUPABASE_SECRET_KEY: ci-canary-secret-key-not-real
       BOOTSTRAP_ADMIN_EMAIL: ""
+      # Canary only: unit tests mock the Anthropic client and never call the API.
+      ANTHROPIC_API_KEY: ci-canary-anthropic-key-not-real
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -40,9 +42,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - name: Secret canary must not reach the client bundle
+      - name: Secret canaries must not reach the client bundle
         run: |
-          if grep -rl "ci-canary-secret-key-not-real\|SUPABASE_SECRET_KEY" .next/static; then
+          if grep -rlE "ci-canary-secret-key-not-real|SUPABASE_SECRET_KEY|ci-canary-anthropic-key-not-real|ANTHROPIC_API_KEY" .next/static; then
             echo "::error::Server secret leaked into the client bundle"; exit 1
           fi
 

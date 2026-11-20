@@ -26,6 +26,16 @@ export default defineConfig({
           hookTimeout: 60_000,
         },
       },
+      {
+        // Opt-in, billed: real Anthropic calls. Skipped unless AI_LIVE_TESTS=1. Never in CI.
+        extends: true,
+        test: {
+          name: "live",
+          include: ["tests/live/**/*.test.ts"],
+          environment: "node",
+          testTimeout: 120_000,
+        },
+      },
     ],
   },
 });
