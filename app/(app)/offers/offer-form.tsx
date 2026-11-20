@@ -551,6 +551,24 @@ export function OfferForm({
             >
               Remove
             </Button>
+            {u.kind === "offer_page" && (
+              <label className="col-span-3 flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={u.notTrackingLink}
+                  onChange={(e) =>
+                    set(
+                      "urls",
+                      d.urls.map((x, j) =>
+                        j === i ? { ...x, notTrackingLink: e.target.checked } : x,
+                      ),
+                    )
+                  }
+                />
+                URL {i + 1} is not a tracking link (a direct page, safe to fetch without registering
+                a click)
+              </label>
+            )}
           </div>
         ))}
         <Button
@@ -558,7 +576,9 @@ export function OfferForm({
           variant="outline"
           size="sm"
           className="w-fit"
-          onClick={() => set("urls", [...d.urls, { url: "", kind: "offer_page" }])}
+          onClick={() =>
+            set("urls", [...d.urls, { url: "", kind: "offer_page", notTrackingLink: false }])
+          }
         >
           Add URL
         </Button>

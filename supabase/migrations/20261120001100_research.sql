@@ -343,9 +343,13 @@ begin
     raise exception 'This research project is archived' using errcode = 'P0001';
   end if;
   perform set_config('app.writer', 'job', true);
-  update public.fetched_pages
-  set fetch_status = 'pending', error_code = null, error_message = null
-  where id = p_page_id and fetch_status not in ('fetching', 'pending');
+  -- Picks up a "not a tracking link" tick added on the (draft) offer since the project started.
+  update public.fetched_pages p
+  set fetch_status = 'pending', error_code = null, error_message = null,
+      not_tracking_link = coalesce(
+        (select u.not_tracking_link from public.offer_urls u where u.id = p.offer_url_id),
+        p.not_tracking_link)
+  where p.id = p_page_id and p.fetch_status not in ('fetching', 'pending');
   perform set_config('app.writer', '', true);
   return v_project;
 end;
