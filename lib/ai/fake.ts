@@ -73,6 +73,9 @@ export function createFakeClient(): AiClient {
       if (user.includes("fake-ai:invalid")) {
         return fakeMessage({ model, text: '{"findings": "not a list"}', inputTokens });
       }
+      if (promptId.startsWith("fingerprint@")) {
+        return fakeMessage({ model, text: JSON.stringify(fakeFingerprint(user)), inputTokens });
+      }
       if (promptId.startsWith("offer-check@")) {
         const text = JSON.stringify({
           findings: [
@@ -84,4 +87,45 @@ export function createFakeClient(): AiClient {
       return fakeMessage({ model, text: "{}", inputTokens });
     },
   };
+}
+
+/**
+ * Fake fingerprint: quotes the first lines of each page verbatim, so the code-side quote
+ * verification passes exactly as it would for a real model that follows the rules.
+ */
+function fakeFingerprint(user: string) {
+  const out = {
+    brand: [] as { value: string; page_id: string; quote: string }[],
+    advertiser: [] as { value: string; page_id: string; quote: string }[],
+    product: [] as { value: string; page_id: string; quote: string }[],
+    claims: [] as { value: string; page_id: string; quote: string }[],
+    phrases: [] as { value: string; page_id: string; quote: string }[],
+    open_questions: ["Fake fingerprint: no model was called (test stub)."],
+  };
+  const blocks = user.matchAll(
+    /<untrusted_[0-9a-f]+ source="page:([^"]+)">\s([\s\S]*?)\s<\/untrusted_[0-9a-f]+>/g,
+  );
+  for (const [, pageId, json] of blocks) {
+    if (!pageId || !json) continue;
+    let text = "";
+    try {
+      text = String((JSON.parse(json) as { text?: unknown }).text ?? "");
+    } catch {
+      continue;
+    }
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length >= 3);
+    const [first, second] = lines;
+    if (first && out.brand.length === 0) {
+      const quote = first.slice(0, 80);
+      out.brand.push({ value: quote.slice(0, 60), page_id: pageId, quote });
+    }
+    if (second) {
+      const quote = second.slice(0, 120);
+      out.claims.push({ value: quote, page_id: pageId, quote });
+    }
+  }
+  return out;
 }
