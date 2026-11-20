@@ -23,15 +23,32 @@ then run `pnpm admin:bootstrap` and open the invite link: your first sign-in mak
 
 ## Tests
 
-| Command                 | What                                                 | Needs           |
-| ----------------------- | ---------------------------------------------------- | --------------- |
-| `pnpm test`             | Unit tests (Vitest)                                  | nothing         |
-| `pnpm test:db`          | pgTAP RLS tests in `supabase/tests/database`         | `pnpm db:start` |
-| `pnpm test:integration` | RLS through the real Data API (Vitest + supabase-js) | `pnpm db:start` |
-| `pnpm test:e2e`         | Playwright smoke tests (own dev server on port 3100) | `pnpm db:start` |
-| `pnpm test:all`         | All of the above                                     | `pnpm db:start` |
+| Command                 | What                                                      | Needs                                   |
+| ----------------------- | --------------------------------------------------------- | --------------------------------------- |
+| `pnpm test`             | Unit tests (Vitest)                                       | nothing                                 |
+| `pnpm test:db`          | pgTAP RLS tests in `supabase/tests/database`              | `pnpm db:start`                         |
+| `pnpm test:integration` | RLS through the real Data API (Vitest + supabase-js)      | `pnpm db:start`                         |
+| `pnpm test:e2e`         | Playwright smoke tests (own dev server on port 3100)      | `pnpm db:start`                         |
+| `pnpm test:all`         | All of the above                                          | `pnpm db:start`                         |
+| `pnpm test:live`        | Opt-in, billed: real Anthropic calls (2 tiny Haiku calls) | `AI_LIVE_TESTS=1` + `ANTHROPIC_API_KEY` |
 
 First Playwright run: `pnpm exec playwright install chromium`.
+
+No test except `test:live` calls the Anthropic API: unit and integration tests inject a fake client,
+and the e2e dev server runs with `AI_FAKE=1`.
+
+## AI service (`lib/ai/`)
+
+- Every model call goes through `runStructured` (`lib/ai/run.ts`): budget reservation → call with a
+  JSON-schema output → Zod validation → `ai_calls` row with code-computed cost. Invalid output,
+  refusals and truncation are logged failures, never saved.
+- Models per tier: `lib/ai/config.ts` (override with `AI_MODEL_GENERATION` / `AI_MODEL_CLASSIFICATION`).
+  Prices: `lib/ai/pricing.ts` (bump `PRICE_VERSION` when they change).
+- Prompts: `lib/ai/prompts/<name>/vN.ts`. Released versions are frozen by `prompts/hashes.json`;
+  to change a prompt add `vN+1` and its hash (the unit test prints it).
+- Untrusted text (pages, uploads, free-text fields) only goes through `wrapUntrusted`, in the user turn.
+- Local dev without a key: set `AI_FAKE=1` for a canned model (refused in production).
+- Budgets: workspace cap (seeded $20) + optional per-user caps, set by admins in Settings.
 
 ## Database
 
@@ -48,3 +65,5 @@ First Playwright run: `pnpm exec playwright install chromium`.
    `supabase/templates/magic_link.html` (Magic link).
 4. Link and push migrations: `pnpm exec supabase link --project-ref <ref>` then `pnpm exec supabase db push`.
 5. Before team rollout: custom SMTP (see Decisions log).
+6. Set `ANTHROPIC_API_KEY` (one key per environment, with a Console spend limit) and check the
+   workspace AI cap in Settings.
