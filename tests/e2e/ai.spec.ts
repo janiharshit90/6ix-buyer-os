@@ -148,15 +148,19 @@ test("admin sees team AI usage and sets a user cap; a buyer sees only their own 
     .filter({ has: adminPage.locator(`input[name="userId"][value="${buyer.id}"]`) });
   await row.getByRole("textbox").fill("7.5");
   await row.getByRole("button", { name: "Set" }).click();
-  await expect(row.getByRole("status")).toHaveText("Cap saved.");
-
-  const { data: cap } = await adminClient()
-    .from("budgets")
-    .select("monthly_cap_usd")
-    .eq("scope", "user")
-    .eq("scope_id", buyer.id)
-    .single();
-  expect(cap?.monthly_cap_usd).toBe(7.5);
+  // Assert the saved cap itself: the "Cap saved." message can be replaced by the page's
+  // re-render (one form per user) before a slow machine gets to read it.
+  await expect
+    .poll(async () => {
+      const { data } = await adminClient()
+        .from("budgets")
+        .select("monthly_cap_usd")
+        .eq("scope", "user")
+        .eq("scope_id", buyer.id)
+        .maybeSingle();
+      return data?.monthly_cap_usd ?? null;
+    })
+    .toBe(7.5);
 
   const buyerPage = await (await browser.newContext()).newPage();
   await signIn(buyerPage, buyer.email);
