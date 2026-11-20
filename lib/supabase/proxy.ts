@@ -5,7 +5,8 @@ import type { Database } from "@/lib/db/types";
 import { getPublicEnv } from "@/lib/env/public";
 
 /** Paths reachable without a session. Everything else redirects to /login. */
-export const PUBLIC_PATHS = ["/login", "/auth/"];
+// /api/inngest is authenticated by Inngest's request signature (INNGEST_SIGNING_KEY), not a session.
+export const PUBLIC_PATHS = ["/login", "/auth/", "/api/inngest"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p));
