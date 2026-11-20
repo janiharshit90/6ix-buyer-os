@@ -28,9 +28,11 @@ import {
   listAssignableOwners,
   type VersionView,
 } from "@/lib/offers/queries";
+import { getLatestCheck } from "@/lib/offers/ai-check";
 import { missingFields, WEEKDAYS } from "@/lib/offers/schema";
 
 import { MissingChecklist } from "../offer-form";
+import { AiCheckButton, AiCheckResults } from "./ai-check";
 import {
   ApproveForm,
   DiscardDraftButton,
@@ -69,6 +71,9 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
   const showEconomics = canSeeEconomics(profile);
   const nextVersion = (versions[0]?.version ?? 0) + 1;
   const assignableOwners = canApprove(profile) ? await listAssignableOwners() : [];
+  // Creatives never see checks (findings may mention economics); RLS enforces it too.
+  const latestCheck = shown && showEconomics ? await getLatestCheck(shown.id) : null;
+  const canRunCheck = shown?.status === "draft" && editable && showEconomics;
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
@@ -131,6 +136,26 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
           </Link>
         ))}
       </nav>
+
+      {shown && (canRunCheck || latestCheck) && (
+        <section className="flex flex-col gap-2" aria-label="AI check">
+          <h2 className="font-medium">AI check</h2>
+          {canRunCheck && (
+            <AiCheckButton
+              offerId={offer.id}
+              versionId={shown.id}
+              version={shown.version}
+              hasCheck={latestCheck !== null}
+            />
+          )}
+          {latestCheck && (
+            <AiCheckResults
+              check={latestCheck}
+              checkedAt={formatDateTime(latestCheck.created_at)}
+            />
+          )}
+        </section>
+      )}
 
       {shown ? (
         <VersionFacts
