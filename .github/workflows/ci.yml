@@ -34,6 +34,9 @@ jobs:
       DATABASE_URL: postgresql://ci-canary-database-url-not-real@127.0.0.1:5432/postgres
       INNGEST_SIGNING_KEY: ci-canary-inngest-signing-key-not-real
       INNGEST_EVENT_KEY: ci-canary-inngest-event-key-not-real
+      APP_INNGEST_EVENT_KEY: ci-canary-app-inngest-event-key-not-real
+      APP_INNGEST_SIGNING_KEY: signkey-ci-canary-app-inngest-signing-not-real
+      APP_INNGEST_SIGNING_KEY_FALLBACK: signkey-ci-canary-app-inngest-fallback-not-real
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -48,7 +51,7 @@ jobs:
       - run: pnpm build
       - name: Secret canaries must not reach the client bundle
         run: |
-          if grep -rlE "ci-canary-|SUPABASE_SECRET_KEY|ANTHROPIC_API_KEY|DATABASE_URL|INNGEST_SIGNING_KEY|INNGEST_EVENT_KEY" .next/static; then
+          if grep -rlE "ci-canary-|SUPABASE_SECRET_KEY|ANTHROPIC_API_KEY|DATABASE_URL|INNGEST_SIGNING_KEY|INNGEST_EVENT_KEY|APP_INNGEST_" .next/static; then
             echo "::error::Server secret leaked into the client bundle"; exit 1
           fi
 

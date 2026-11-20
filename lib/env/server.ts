@@ -78,3 +78,32 @@ export function getDatabaseUrl(source: NodeJS.ProcessEnv = process.env): string 
   }
   return result.data;
 }
+
+/**
+ * Inngest keys. The APP_INNGEST_* names exist because the standard INNGEST_* variables on Vercel
+ * are owned (and locked) by Vercel integrations pointing at a different Inngest account. When an
+ * APP_ name is set it wins; otherwise the SDK reads the standard names (local dev, CI).
+ * Values are never echoed in errors.
+ */
+const signingKey = optionalString.refine(
+  (v) => v === undefined || v.startsWith("signkey-"),
+  "must be an Inngest signing key (starts with signkey-)",
+);
+
+export const inngestEnvSchema = z.object({
+  APP_INNGEST_EVENT_KEY: optionalString,
+  APP_INNGEST_SIGNING_KEY: signingKey,
+  APP_INNGEST_SIGNING_KEY_FALLBACK: signingKey,
+});
+
+export type InngestEnv = z.infer<typeof inngestEnvSchema>;
+
+export function getInngestEnv(source: NodeJS.ProcessEnv = process.env): InngestEnv {
+  const result = inngestEnvSchema.safeParse({
+    APP_INNGEST_EVENT_KEY: source.APP_INNGEST_EVENT_KEY,
+    APP_INNGEST_SIGNING_KEY: source.APP_INNGEST_SIGNING_KEY,
+    APP_INNGEST_SIGNING_KEY_FALLBACK: source.APP_INNGEST_SIGNING_KEY_FALLBACK,
+  });
+  if (!result.success) throw new Error(formatEnvError(result.error));
+  return result.data;
+}
