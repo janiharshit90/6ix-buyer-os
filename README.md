@@ -57,6 +57,11 @@ unless you set `E2E_PROD=1`.
 - **Jobs** run on Inngest (`lib/jobs/`, served at `/api/inngest`). Every step acts **as the user** inside
   Postgres (`lib/db/as-user.ts`: `set local role authenticated` + JWT claims), so RLS applies to the job too.
   Job payloads carry ids only. `fetched_pages` and `fingerprints` are writable only inside a job.
+- **Keys:** the app reads `APP_INNGEST_EVENT_KEY` / `APP_INNGEST_SIGNING_KEY` (+ optional
+  `APP_INNGEST_SIGNING_KEY_FALLBACK`) when set, otherwise the standard `INNGEST_EVENT_KEY` /
+  `INNGEST_SIGNING_KEY`. Use the `APP_` names on Vercel when the standard ones are owned by an integration
+  for a different Inngest account (`lib/jobs/keys.ts`). With an `APP_` signing key set, the standard fallback
+  key is ignored. All server-only; mark them Sensitive.
 - **Locally:** set `DATABASE_URL` (the `DB_URL` from `pnpm exec supabase status`) and `INNGEST_DEV=1` in
   `.env.local`, run `pnpm dev`, and in a second terminal `pnpm inngest:dev` (dashboard at http://localhost:8288).
 - **Fetcher** (`lib/fetcher/`): plain HTTP only, no browser. SSRF rules on every hop (no internal/metadata
