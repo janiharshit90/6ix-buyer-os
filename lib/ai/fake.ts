@@ -9,7 +9,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { AiClient, AiResponse } from "./client";
 
 export const FAKE_MESSAGE =
-  "Fake AI suggestion: AI_FAKE is on, so no model was called. Confirm the vertical with the network.";
+  "Fake AI suggestion: no model was called (test stub). Confirm the vertical with the network.";
 
 function userText(params: Anthropic.MessageCreateParamsNonStreaming): string {
   return params.messages

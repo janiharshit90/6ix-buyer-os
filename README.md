@@ -35,7 +35,9 @@ then run `pnpm admin:bootstrap` and open the invite link: your first sign-in mak
 First Playwright run: `pnpm exec playwright install chromium`.
 
 No test except `test:live` calls the Anthropic API: unit and integration tests inject a fake client,
-and the e2e dev server runs with `AI_FAKE=1`.
+and e2e points the real SDK at a local stub (`tests/e2e/anthropic-stub.mjs`) via `ANTHROPIC_BASE_URL`.
+CI runs e2e against a production build (`next build` + `next start`); locally it uses `next dev`
+unless you set `E2E_PROD=1`.
 
 ## AI service (`lib/ai/`)
 

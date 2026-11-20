@@ -9,7 +9,7 @@ import {
   signedInClient,
 } from "../integration/local-supabase";
 
-// The dev server runs with AI_FAKE=1 (playwright.config.ts): no Anthropic API calls.
+// The app talks to a local Anthropic stub (playwright.config.ts): no real API calls.
 // Users with ai_calls/offers can't be deleted (append-only log); deleteTestUsers leaves them.
 const created: string[] = [];
 test.afterAll(async () => deleteTestUsers(created));
@@ -163,5 +163,8 @@ test("admin sees team AI usage and sets a user cap; a buyer sees only their own 
   await buyerPage.goto("/settings");
   await expect(buyerPage.getByTestId("ai-usage")).toContainText("of $7.50");
   await expect(buyerPage.getByTestId("ai-team-usage")).toHaveCount(0);
+  // Buyers never see the workspace total (PR #12 review), only their own spend.
+  await expect(buyerPage.getByTestId("ai-usage")).not.toContainText("Workspace spend");
+  await expect(adminPage.getByTestId("ai-usage")).toContainText("Workspace spend");
   await expect(buyerPage.getByLabel("Workspace monthly cap (USD)")).toHaveCount(0);
 });
