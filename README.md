@@ -23,13 +23,13 @@ then run `pnpm admin:bootstrap` and open the invite link: your first sign-in mak
 
 ## Tests
 
-| Command                 | What                                                    | Needs                 |
-| ----------------------- | ------------------------------------------------------- | --------------------- |
-| `pnpm test`             | Unit tests (Vitest)                                     | nothing               |
-| `pnpm test:db`          | pgTAP RLS tests in `supabase/tests/database`            | `pnpm db:start`       |
-| `pnpm test:integration` | RLS through the real Data API (Vitest + supabase-js)    | `pnpm db:start`       |
-| `pnpm test:e2e`         | Playwright smoke tests (own dev server on port 3100)    | `pnpm db:start`       |
-| `pnpm test:all`         | All of the above                                        | `pnpm db:start`       |
+| Command                 | What                                                 | Needs           |
+| ----------------------- | ---------------------------------------------------- | --------------- |
+| `pnpm test`             | Unit tests (Vitest)                                  | nothing         |
+| `pnpm test:db`          | pgTAP RLS tests in `supabase/tests/database`         | `pnpm db:start` |
+| `pnpm test:integration` | RLS through the real Data API (Vitest + supabase-js) | `pnpm db:start` |
+| `pnpm test:e2e`         | Playwright smoke tests (own dev server on port 3100) | `pnpm db:start` |
+| `pnpm test:all`         | All of the above                                     | `pnpm db:start` |
 
 First Playwright run: `pnpm exec playwright install chromium`.
 

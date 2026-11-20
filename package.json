@@ -19,7 +19,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/db/types.ts",
-    "admin:bootstrap": "node --env-file=.env.local scripts/invite-bootstrap-admin.ts"
+    "admin:bootstrap": "node --env-file=.env.local scripts/invite-bootstrap-admin.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

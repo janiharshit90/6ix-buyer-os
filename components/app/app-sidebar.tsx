@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import {
   Sidebar,
@@ -19,31 +19,43 @@ import {
 import { NAV_ITEMS } from "./nav-items";
 
 export function AppSidebar({ footer }: { footer: ReactNode }) {
-  const pathname = usePathname();
-
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-3 text-sm font-semibold">6ix Buyer OS</SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu aria-label="Main">
-              {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-                <SidebarMenuItem key={href}>
-                  <SidebarMenuButton
-                    isActive={pathname === href || pathname.startsWith(`${href}/`)}
-                    render={<Link href={href} />}
-                  >
-                    <Icon />
-                    <span>{label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+            {/* The pathname is request data: stream it in so dynamic routes can still
+                prerender the shell. Until then, the menu renders with no active item. */}
+            <Suspense fallback={<NavMenu pathname={null} />}>
+              <ActiveNavMenu />
+            </Suspense>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>{footer}</SidebarFooter>
     </Sidebar>
+  );
+}
+
+function ActiveNavMenu() {
+  return <NavMenu pathname={usePathname()} />;
+}
+
+function NavMenu({ pathname }: { pathname: string | null }) {
+  return (
+    <SidebarMenu aria-label="Main">
+      {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+        <SidebarMenuItem key={href}>
+          <SidebarMenuButton
+            isActive={pathname !== null && (pathname === href || pathname.startsWith(`${href}/`))}
+            render={<Link href={href} />}
+          >
+            <Icon />
+            <span>{label}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
   );
 }

@@ -1,0 +1,16 @@
+# LF everywhere, in the repo AND in working trees (overrides core.autocrlf=true on
+# Windows), so formatters and git agree and checkouts don't create whitespace diffs.
+* text=auto eol=lf
+
+# Binary files: never touch line endings or diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.docx binary

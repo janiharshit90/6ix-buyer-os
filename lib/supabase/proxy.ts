@@ -39,7 +39,8 @@ export async function updateSession(request: NextRequest) {
 
   // Don't put code between client creation and getClaims(): it refreshes the session.
   const { data } = await supabase.auth.getClaims();
-  const signedIn = Boolean(data?.claims?.sub);
+  const userId = data?.claims?.sub;
+  const signedIn = Boolean(userId);
   const { pathname, search } = request.nextUrl;
 
   if (!signedIn && !isPublicPath(pathname)) {
@@ -49,6 +50,27 @@ export async function updateSession(request: NextRequest) {
     const redirect = NextResponse.redirect(loginUrl);
     for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
     return redirect;
+  }
+
+  // Signed in but not (or no longer) active → /pending, before any page renders.
+  // Redirecting here instead of inside the (app) layout's <Suspense> keeps dev-time
+  // instant-navigation validation from aborting on a redirect mid-render. Still not the
+  // authorization layer: RLS denies inactive users everywhere, and the layout re-checks.
+  if (userId && !isPublicPath(pathname) && pathname !== "/pending") {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("active")
+      .eq("id", userId)
+      .maybeSingle();
+    // On a lookup error, fall through: the layout's requireActiveProfile() handles it visibly.
+    if (!error && !profile?.active) {
+      const pendingUrl = request.nextUrl.clone();
+      pendingUrl.pathname = "/pending";
+      pendingUrl.search = "";
+      const redirect = NextResponse.redirect(pendingUrl);
+      for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+      return redirect;
+    }
   }
 
   return response;
