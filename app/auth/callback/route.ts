@@ -13,6 +13,17 @@ const EMAIL_LINK_TYPES: readonly EmailOtpType[] = ["email", "magiclink", "invite
  *  - magic link / invite email → ?token_hash=&type=  (see supabase/templates)
  */
 export async function GET(request: NextRequest) {
+  try {
+    return await handleCallback(request);
+  } catch (error) {
+    // P2: a transient failure (e.g. DB unreachable during bootstrap) shows a clear message
+    // instead of a raw 500. No details in the URL; the code goes to the logs.
+    console.error(`[auth] callback failed: ${(error as Error).name}`);
+    return NextResponse.redirect(new URL("/login?error=callback_failed", request.url));
+  }
+}
+
+async function handleCallback(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");

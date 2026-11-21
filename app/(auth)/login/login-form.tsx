@@ -12,6 +12,7 @@ import { sendMagicLink, signInWithGoogle, type MagicLinkState } from "./actions"
 const ERRORS: Record<string, string> = {
   not_invited: "This account hasn't been invited. Ask an admin for an invite.",
   link_invalid: "That sign-in link is invalid or has expired. Request a new one.",
+  callback_failed: "Sign-in couldn't be completed just now. Try the link again in a moment.",
   missing_token: "That sign-in link is incomplete. Request a new one.",
   google_failed: "Couldn't start Google sign-in. Try again.",
   signout_failed: "Sign-out failed. Try again.",

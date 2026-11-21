@@ -74,6 +74,8 @@ export default defineConfig({
         INNGEST_DEV: "1",
         DATABASE_URL: stack.dbUrl,
         // Test-only: lets the fetcher reach the fixture pages (refused on Vercel).
+        // The e2e production build may use them; any other production build refuses them.
+        ALLOW_E2E_TEST_HOSTS: "1",
         FETCHER_TEST_HOSTS: ["lander", "safe"]
           .map((n) => `${n}.fixture.test=127.0.0.1:${FIXTURE_PORT}`)
           .join(","),

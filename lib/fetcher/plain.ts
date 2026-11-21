@@ -56,7 +56,32 @@ class HopError extends Error {
 
 type Target = { address: string; port: number; protocol: "http:" | "https:" };
 
-async function pickTarget(url: URL, resolver: Resolver, testHosts: TestHostMap): Promise<Target> {
+/** BUG-8: a stalled DNS resolver must not outlive the fetch's overall timeout. */
+function withSignal<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted)
+    return Promise.reject(new HopError("timeout", "The page took too long to respond."));
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new HopError("timeout", "The page took too long to respond."));
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(
+      (v) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(v);
+      },
+      (e) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(e);
+      },
+    );
+  });
+}
+
+async function pickTarget(
+  url: URL,
+  resolver: Resolver,
+  testHosts: TestHostMap,
+  signal: AbortSignal,
+): Promise<Target> {
   const protocol = url.protocol as "http:" | "https:";
   const host = url.hostname.toLowerCase().replace(/\.$/, "");
   const mapped = testHosts.get(host);
@@ -68,8 +93,9 @@ async function pickTarget(url: URL, resolver: Resolver, testHosts: TestHostMap):
     addresses = [{ address: literal, family: isIP(literal) }];
   } else {
     try {
-      addresses = await resolver(host);
-    } catch {
+      addresses = await withSignal(resolver(host), signal);
+    } catch (e) {
+      if (e instanceof HopError) throw e; // timeout
       throw new HopError("dns", "The domain name couldn't be resolved.");
     }
   }
@@ -126,9 +152,10 @@ function readBody(res: http.IncomingMessage, maxBytes: number): Promise<Buffer> 
       parts.push(chunk);
     });
     stream.on("end", () => resolve(Buffer.concat(parts)));
-    stream.on("error", () =>
-      reject(new HopError("bad_encoding", "The page couldn't be decompressed.")),
-    );
+    stream.on("error", () => {
+      res.destroy(); // BUG-8: free the socket
+      reject(new HopError("bad_encoding", "The page couldn't be decompressed."));
+    });
     res.on("error", () =>
       reject(new HopError("connection", "The connection dropped while reading the page.")),
     );
@@ -179,7 +206,7 @@ function requestOnce(
       (res) => {
         const status = res.statusCode ?? 0;
         if (status >= 300 && status < 400) {
-          res.resume();
+          res.destroy(); // BUG-8: never read (or drain) a redirect's body
           resolve({ status, headers: res.headers, body: null });
           return;
         }
@@ -269,7 +296,7 @@ export function createPlainFetcher(
 
         let res: RawResponse;
         try {
-          const target = await pickTarget(url, resolver, testHosts);
+          const target = await pickTarget(url, resolver, testHosts, signal);
           res = await requestOnce(url, target, signal, limits);
         } catch (e) {
           if (e instanceof HopError) {

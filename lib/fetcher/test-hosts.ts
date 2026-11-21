@@ -3,6 +3,7 @@
 //   - only names under the reserved .test TLD (never resolvable on the public internet)
 //   - only to loopback addresses
 //   - refused outright on Vercel (VERCEL_ENV set), whatever else is configured
+//   - refused in production builds unless ALLOW_E2E_TEST_HOSTS=1 (only the e2e run sets it)
 // Format: "lander.fixture.test=127.0.0.1:3198,offer.fixture.test=127.0.0.1:3198"
 
 export type TestHostMap = ReadonlyMap<string, { address: string; port: number }>;
@@ -12,6 +13,11 @@ export function parseTestHosts(env: NodeJS.ProcessEnv = process.env): TestHostMa
   if (!raw) return new Map();
   if (env.VERCEL_ENV) {
     throw new Error("FETCHER_TEST_HOSTS is test-only and is refused on Vercel.");
+  }
+  // SEC-3: also refused in any production build, except the e2e run (playwright.config.ts sets
+  // ALLOW_E2E_TEST_HOSTS=1 for its own `next start`).
+  if (env.NODE_ENV === "production" && env.ALLOW_E2E_TEST_HOSTS !== "1") {
+    throw new Error("FETCHER_TEST_HOSTS is test-only and is refused in production builds.");
   }
   const map = new Map<string, { address: string; port: number }>();
   for (const entry of raw.split(",")) {
