@@ -25,10 +25,6 @@ import {
   getTeamUsage,
   type BudgetStatus,
 } from "@/lib/ai/usage";
-import { getInngestEnv } from "@/lib/env/server";
-import { inngest } from "@/lib/jobs/client";
-import { describeSigningKey, type SigningKeyDiagnostic } from "@/lib/jobs/key-diagnostics";
-import { inngestKeySources } from "@/lib/jobs/keys";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -60,7 +56,6 @@ async function SettingsContent() {
       <ProfileSection profile={profile} />
       <AiUsageSection profile={profile} />
       {profile.role === "admin" && <UsersSection />}
-      {profile.role === "admin" && <InngestKeyCheck />}
     </div>
   );
 }
@@ -207,64 +202,5 @@ async function TeamUsage({ monthStart, canEdit }: { monthStart: string; canEdit:
         ))}
       </TableBody>
     </Table>
-  );
-}
-
-/**
- * TEMPORARY admin-only diagnostic for the Inngest sync 401. Shows where the signing key came
- * from and a short fingerprint, never the key. Remove once sync works.
- */
-async function InngestKeyCheck() {
-  await requireAdmin();
-  const sources = inngestKeySources(getInngestEnv());
-  // The keys the client actually uses (APP_ wins, else the standard names).
-  const rows: SigningKeyDiagnostic[] = [
-    describeSigningKey(sources.signingKey, inngest.signingKey, process.env[sources.signingKey]),
-    describeSigningKey(
-      sources.signingKey === "APP_INNGEST_SIGNING_KEY"
-        ? process.env.APP_INNGEST_SIGNING_KEY_FALLBACK
-          ? "APP_INNGEST_SIGNING_KEY_FALLBACK"
-          : "APP_INNGEST_SIGNING_KEY (pinned as fallback)"
-        : "INNGEST_SIGNING_KEY_FALLBACK",
-      inngest.signingKeyFallback,
-      sources.signingKey === "APP_INNGEST_SIGNING_KEY"
-        ? (process.env.APP_INNGEST_SIGNING_KEY_FALLBACK ?? process.env.APP_INNGEST_SIGNING_KEY)
-        : process.env.INNGEST_SIGNING_KEY_FALLBACK,
-    ),
-  ];
-  return (
-    <section className="flex flex-col gap-3" data-testid="inngest-key-check">
-      <h2 className="font-medium">Inngest signing key check (temporary)</h2>
-      <p className="text-muted-foreground text-sm">
-        Compare the fingerprint with the one computed from the key in the Inngest dashboard. No key
-        is shown. Event key source: {sources.eventKey}.
-      </p>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Used as</TableHead>
-            <TableHead>Variable</TableHead>
-            <TableHead>Prefix</TableHead>
-            <TableHead className="text-right">Length</TableHead>
-            <TableHead>Outer whitespace</TableHead>
-            <TableHead>SHA-256 (first 8)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((r, i) => (
-            <TableRow key={i}>
-              <TableCell>{i === 0 ? "signing key" : "fallback"}</TableCell>
-              <TableCell className="font-mono text-xs">{r.variable}</TableCell>
-              <TableCell className="font-mono text-xs">
-                {r.present ? (r.prefix ?? "no prefix") : "not set"}
-              </TableCell>
-              <TableCell className="text-right">{r.length ?? "—"}</TableCell>
-              <TableCell>{r.rawHasOuterWhitespace ? "yes (trimmed before use)" : "no"}</TableCell>
-              <TableCell className="font-mono text-xs">{r.sha256First8 ?? "—"}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </section>
   );
 }

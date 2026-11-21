@@ -98,3 +98,18 @@ describe("the real Inngest client", () => {
     expect(client.eventKey).toBe("test-standard-event-key");
   });
 });
+
+describe("APP_INNGEST_* values are trimmed when loaded", () => {
+  it("strips spaces, tabs and newlines from pasted keys", () => {
+    const loaded = getInngestEnv({
+      APP_INNGEST_SIGNING_KEY: `  ${APP_SIGNING}\r\n`,
+      APP_INNGEST_EVENT_KEY: "\ttest-event-key ",
+    } as unknown as NodeJS.ProcessEnv);
+    expect(loaded.APP_INNGEST_SIGNING_KEY).toBe(APP_SIGNING);
+    expect(inngestKeyOptions(loaded)).toEqual({
+      eventKey: "test-event-key",
+      signingKey: APP_SIGNING,
+      signingKeyFallback: APP_SIGNING,
+    });
+  });
+});
