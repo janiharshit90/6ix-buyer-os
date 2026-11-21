@@ -50,6 +50,12 @@ export type Database = {
                   }
                   Relationships: [
                     {
+      foreignKeyName: "ai_calls_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "research_projects"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "ai_calls_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
@@ -397,7 +403,10 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "ai_budget_status":
+            "abort_stalled_research_run":
+{ Args: { "p_project_id": string,"p_reason"?: string }; Returns: undefined
+                           },
+"ai_budget_status":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
 "approve_offer_version":
