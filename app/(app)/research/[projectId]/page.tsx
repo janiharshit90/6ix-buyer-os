@@ -57,7 +57,7 @@ async function ProjectDetail({ params }: Pick<PageProps<"/research/[projectId]">
     p_project_id: projectId,
   });
 
-  const { stalled, working } = researchState(project, pages);
+  const { busy, stalled, working } = researchState(project, pages);
   const current =
     fingerprints.find((f) => f.id === project.current_fingerprint_id) ?? fingerprints[0];
   const pageById = new Map(pages.map((p) => [p.id, p]));
@@ -78,7 +78,8 @@ async function ProjectDetail({ params }: Pick<PageProps<"/research/[projectId]">
           · owner {formatValue(project.owner?.display_name)} · started{" "}
           {formatDateTime(project.created_at)}
         </p>
-        <LiveRefresh active={working} />
+        {/* Stalled projects still poll, slowly, so a "Run again" shows its progress. */}
+        <LiveRefresh active={busy} slow={stalled} />
         {stalled && (
           <p
             role="status"

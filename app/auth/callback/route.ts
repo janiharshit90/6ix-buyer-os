@@ -1,4 +1,5 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { unstable_rethrow } from "next/navigation";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { maybeBootstrapAdmin } from "@/lib/auth/bootstrap.server";
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest) {
   try {
     return await handleCallback(request);
   } catch (error) {
+    // Next.js uses thrown errors internally (e.g. cookies() marking the route dynamic during
+    // the build); those must pass through, not become a "callback failed" redirect.
+    unstable_rethrow(error);
     // P2: a transient failure (e.g. DB unreachable during bootstrap) shows a clear message
     // instead of a raw 500. No details in the URL; the code goes to the logs.
     console.error(`[auth] callback failed: ${(error as Error).name}`);
