@@ -93,3 +93,24 @@ export async function deleteTestUsers(ids: string[]) {
   const admin = adminClient();
   await Promise.all(ids.map((id) => admin.auth.admin.deleteUser(id)));
 }
+
+/**
+ * A Postgres connection as the least-privilege job_runner role, as production jobs use.
+ * The role is created NOLOGIN by the migrations; here, in the throwaway LOCAL database only, it
+ * gets a fixed local password so tests can log in. Hosted projects set their own (README).
+ */
+export const LOCAL_JOB_RUNNER_PASSWORD = "local-test-only-job-runner";
+
+export async function jobRunnerDbUrl(): Promise<string> {
+  const { default: postgres } = await import("postgres");
+  const admin = postgres(localStack().dbUrl, { prepare: false, max: 1, onnotice: () => {} });
+  try {
+    await admin.unsafe(`alter role job_runner with login password '${LOCAL_JOB_RUNNER_PASSWORD}'`);
+  } finally {
+    await admin.end();
+  }
+  const url = new URL(localStack().dbUrl);
+  url.username = "job_runner";
+  url.password = LOCAL_JOB_RUNNER_PASSWORD;
+  return url.toString();
+}
