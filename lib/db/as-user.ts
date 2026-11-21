@@ -42,9 +42,32 @@ export function setJobSqlForTests(instance: postgres.Sql | undefined) {
   shared = instance;
 }
 
+let roleChecked = false;
+
+/**
+ * Defense in depth (Decisions log 2026-11-21): in production, jobs should connect as the
+ * least-privilege job_runner role. Checked once per process; a privileged role is logged
+ * loudly (no connection details). Switch to refusing once job_runner is live everywhere.
+ */
+async function checkConnectionRole(tx: JobTx) {
+  if (roleChecked) return;
+  roleChecked = true;
+  if (process.env.VERCEL_ENV !== "production") return;
+  const [r] = await tx<{ name: string; privileged: boolean }[]>`
+    select session_user as name,
+           (r.rolsuper or r.rolbypassrls or r.rolinherit) as privileged
+    from pg_roles r where r.rolname = session_user`;
+  if (!r || r.privileged) {
+    console.error(
+      `[jobs] DATABASE_URL connects as a privileged role (${r?.name ?? "unknown"}); use job_runner (see README).`,
+    );
+  }
+}
+
 export async function withUserTx<T>(userId: string, fn: (tx: JobTx) => Promise<T>): Promise<T> {
   const claims = JSON.stringify({ sub: userId, role: "authenticated" });
   return (await sql().begin(async (tx) => {
+    await checkConnectionRole(tx);
     await tx`select
       set_config('role', 'authenticated', true),
       set_config('request.jwt.claims', ${claims}, true),

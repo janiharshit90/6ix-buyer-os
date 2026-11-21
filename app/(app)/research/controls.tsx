@@ -74,13 +74,36 @@ export function RunAgainButton({ projectId, label }: { projectId: string; label:
   );
 }
 
-/** Re-renders the server page every few seconds while jobs are running. */
+/**
+ * Re-renders the server page every few seconds while jobs are running. Pauses while the tab is
+ * hidden (no polling from background tabs) and refreshes right away when it becomes visible.
+ */
 export function LiveRefresh({ active }: { active: boolean }) {
   const router = useRouter();
   useEffect(() => {
     if (!active) return;
-    const timer = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(timer);
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      if (timer === undefined) timer = setInterval(() => router.refresh(), 3000);
+    };
+    const stop = () => {
+      if (timer !== undefined) clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh();
+        start();
+      } else {
+        stop();
+      }
+    };
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [active, router]);
   return active ? (
     <p role="status" className="text-muted-foreground text-xs">

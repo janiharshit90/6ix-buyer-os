@@ -4,13 +4,25 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { inviteUserAs } from "@/lib/admin/invite";
-import { requireActiveProfile, requireAdmin } from "@/lib/auth/current-profile";
+import { requireActiveProfile } from "@/lib/auth/current-profile";
+import { dbMessage } from "@/lib/db/errors";
 import { APP_ROLES } from "@/lib/db/roles";
 import { getPublicEnv } from "@/lib/env/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = { status: "idle" | "ok" | "error"; message?: string };
+
+const NOT_ADMIN: ActionState = { status: "error", message: "Only admins can do that." };
+
+/**
+ * Admin-only actions return an error state instead of throwing (a throw shows the error page).
+ * Still only a UI convenience: RLS, grants and triggers are what enforce admin rights.
+ */
+async function isAdmin(): Promise<boolean> {
+  const profile = await requireActiveProfile();
+  return profile.role === "admin";
+}
 
 const displayNameSchema = z.object({
   displayName: z.string().trim().min(1, "Name is required.").max(100, "Max 100 characters."),
@@ -31,7 +43,7 @@ export async function updateDisplayName(
     .update({ display_name: parsed.data.displayName })
     .eq("id", profile.id)
     .select("id");
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: dbMessage(error) };
   if (!data?.length) return { status: "error", message: "Not saved: you don't have permission." };
 
   revalidatePath("/settings");
@@ -64,7 +76,7 @@ export async function updateUserAccess(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return NOT_ADMIN;
   const parsed = accessSchema.safeParse({
     userId: formData.get("userId"),
     role: formData.get("role"),
@@ -80,7 +92,7 @@ export async function updateUserAccess(
     .update({ role: parsed.data.role, active: parsed.data.active })
     .eq("id", parsed.data.userId)
     .select("id");
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: dbMessage(error) };
   if (!data?.length) return { status: "error", message: "Not saved: you don't have permission." };
 
   revalidatePath("/settings");
@@ -104,7 +116,7 @@ export async function setWorkspaceCap(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return NOT_ADMIN;
   const parsed = workspaceCapSchema.safeParse({ capUsd: formData.get("capUsd") });
   if (!parsed.success) return { status: "error", message: parsed.error.issues[0]?.message };
 
@@ -114,7 +126,7 @@ export async function setWorkspaceCap(
     .select("id")
     .eq("scope", "workspace")
     .maybeSingle();
-  if (readError) return { status: "error", message: readError.message };
+  if (readError) return { status: "error", message: dbMessage(readError) };
 
   const { error } = existing
     ? await supabase
@@ -124,7 +136,7 @@ export async function setWorkspaceCap(
     : await supabase
         .from("budgets")
         .insert({ scope: "workspace", scope_id: null, monthly_cap_usd: parsed.data.capUsd });
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: dbMessage(error) };
 
   revalidatePath("/settings");
   return { status: "ok", message: "Workspace cap saved." };
@@ -137,7 +149,7 @@ const userCapSchema = z.object({
 });
 
 export async function setUserCap(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return NOT_ADMIN;
   const parsed = userCapSchema.safeParse({
     userId: formData.get("userId"),
     capUsd: String(formData.get("capUsd") ?? "").trim(),
@@ -152,7 +164,7 @@ export async function setUserCap(_prev: ActionState, formData: FormData): Promis
       .delete()
       .eq("scope", "user")
       .eq("scope_id", userId);
-    if (error) return { status: "error", message: error.message };
+    if (error) return { status: "error", message: dbMessage(error) };
     revalidatePath("/settings");
     return { status: "ok", message: "Cap removed." };
   }
@@ -163,14 +175,14 @@ export async function setUserCap(_prev: ActionState, formData: FormData): Promis
     .eq("scope", "user")
     .eq("scope_id", userId)
     .maybeSingle();
-  if (readError) return { status: "error", message: readError.message };
+  if (readError) return { status: "error", message: dbMessage(readError) };
 
   const { error } = existing
     ? await supabase.from("budgets").update({ monthly_cap_usd: cap }).eq("id", existing.id)
     : await supabase
         .from("budgets")
         .insert({ scope: "user", scope_id: userId, monthly_cap_usd: cap });
-  if (error) return { status: "error", message: error.message };
+  if (error) return { status: "error", message: dbMessage(error) };
 
   revalidatePath("/settings");
   return { status: "ok", message: "Cap saved." };

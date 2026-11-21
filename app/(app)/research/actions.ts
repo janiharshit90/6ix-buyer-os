@@ -43,9 +43,30 @@ export async function startResearch(_prev: ActionState, formData: FormData): Pro
       message: error.code === "42501" ? "You can't start research on this offer." : error.message,
     };
   }
-  const { project_id: projectId, created } = data as { project_id: string; created: boolean };
-  if (created && !(await queue(projectId, profile.id)))
+  const {
+    project_id: projectId,
+    created,
+    added_urls: addedUrls,
+  } = data as {
+    project_id: string;
+    created: boolean;
+    added_urls?: number;
+  };
+  // BUG-3: queue whenever there's work, not only for a new project: a previous queue attempt
+  // may have failed, or new URLs were just added. Runs per project are serialised, so an extra
+  // event is harmless.
+  let needsRun = created || (addedUrls ?? 0) > 0;
+  if (!needsRun) {
+    const { count } = await supabase
+      .from("fetched_pages")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("fetch_status", "pending");
+    needsRun = (count ?? 0) > 0;
+  }
+  if (needsRun && !(await queue(projectId, profile.id))) {
     return { status: "error", message: QUEUE_FAILED };
+  }
   revalidatePath("/research");
   redirect(`/research/${projectId}`);
 }

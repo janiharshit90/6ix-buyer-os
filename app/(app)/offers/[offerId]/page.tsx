@@ -101,7 +101,8 @@ async function OfferDetail({ params, searchParams }: PageProps<"/offers/[offerId
               <Link href={`/offers/${offer.id}/edit`} className={buttonVariants()}>
                 Edit draft v{draft.version}
               </Link>
-              <DiscardDraftButton offerId={offer.id} versionId={draft.id} />
+              {/* BUG-4: an offer with no approved version keeps its only draft (the DB enforces it too). */}
+              {current && <DiscardDraftButton offerId={offer.id} versionId={draft.id} />}
             </>
           ) : (
             current && <StartDraftButton offerId={offer.id} nextVersion={nextVersion} />

@@ -1,29 +1,12 @@
 // Offer rule checks: deterministic, in code. Anything involving numbers lives here, never
 // in the AI (Non-negotiable #5). The AI check adds qualitative suggestions on top.
 // Pure module, unit-tested. No thresholds: only contradictions between the offer's own facts.
-import type { CheckField, Finding } from "./check-types";
+import type { Finding } from "./check-types";
 import { formatUsd } from "./format";
-import { missingFields, type ChecklistFacts } from "./schema";
+import { missingItems, type ChecklistFacts } from "./schema";
 
 export type RuleCheckInput = ChecklistFacts & {
   economics: { payout_tiers: unknown; target_cpl: number | null; target_roi: number | null };
-};
-
-const MISSING_FIELD: Record<string, CheckField> = {
-  Advertiser: "advertiser",
-  Vertical: "vertical",
-  "Payout model": "payout_model",
-  "Payout tiers": "payout_tiers",
-  "Target CPL": "target_cpl",
-  "Target ROI": "target_roi",
-  States: "states",
-  "Cap (amount, what counts, period)": "cap",
-  "Call hours": "call_hours",
-  "Optimisation event": "optimisation_event",
-  "Feedback delay": "feedback_delay_days",
-  "Restrictions (banned claims/words)": "restrictions",
-  "Network approval required?": "approval_required",
-  "Our lander or offer page URL": "urls",
 };
 
 type Tier = { label: string | null; amount_usd: number | null };
@@ -62,13 +45,9 @@ export function ruleFindings(f: RuleCheckInput): Finding[] {
   const out: Finding[] = [];
   const add = (finding: Finding) => out.push(finding);
 
-  for (const label of missingFields(f)) {
-    add({
-      field: MISSING_FIELD[label] ?? "general",
-      kind: "missing",
-      severity: "info",
-      message: `${label} is unknown.`,
-    });
+  // Field keys come straight from the checklist: label wording can change without effect.
+  for (const { field, label } of missingItems(f)) {
+    add({ field, kind: "missing", severity: "info", message: `${label} is unknown.` });
   }
 
   // Economics vs payout.

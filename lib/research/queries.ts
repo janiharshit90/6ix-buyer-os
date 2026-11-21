@@ -25,6 +25,7 @@ export type ResearchPage = Pick<
   | "fetched_at"
   | "truncated"
   | "text_chars"
+  | "updated_at"
 >;
 
 export async function listProjects() {
@@ -58,7 +59,7 @@ export async function getProject(projectId: string) {
     .from("research_projects")
     .select(
       `id, status, fingerprint_status, fingerprint_error, current_fingerprint_id, offer_id,
-       offer_version_id, owner_id, created_at,
+       offer_version_id, owner_id, created_at, updated_at,
        offer:offers(name, vertical), owner:profiles!research_projects_owner_id_fkey(display_name)`,
     )
     .eq("id", projectId)
@@ -70,7 +71,7 @@ export async function getProject(projectId: string) {
     supabase
       .from("fetched_pages")
       .select(
-        "id, url_kind, requested_url, final_url, final_domain, redirect_chain, http_status, title, fetch_status, error_code, error_message, attempts, fetched_at, truncated, text_chars",
+        "id, url_kind, requested_url, final_url, final_domain, redirect_chain, http_status, title, fetch_status, error_code, error_message, attempts, fetched_at, truncated, text_chars, updated_at",
       )
       .eq("project_id", projectId)
       // Pages are inserted together (same created_at): order by kind (our_lander first), then URL.

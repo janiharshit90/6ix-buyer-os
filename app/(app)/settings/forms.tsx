@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,12 +58,27 @@ export function DisplayNameForm({ displayName }: { displayName: string }) {
 }
 
 export function InviteForm() {
-  const [state, action, pending] = useActionState(inviteUser, IDLE);
+  // Controlled, so the email survives a failed invite (React resets uncontrolled fields after
+  // every form action); cleared only once the invite is sent.
+  const [email, setEmail] = useState("");
+  const [state, action, pending] = useActionState(async (prev: ActionState, formData: FormData) => {
+    const result = await inviteUser(prev, formData);
+    if (result.status === "ok") setEmail("");
+    return result;
+  }, IDLE);
   return (
     <form action={action} className="flex max-w-md flex-col gap-2">
       <Label htmlFor="inviteEmail">Invite by email</Label>
       <div className="flex gap-2">
-        <Input id="inviteEmail" name="email" type="email" placeholder="name@gmail.com" required />
+        <Input
+          id="inviteEmail"
+          name="email"
+          type="email"
+          placeholder="name@gmail.com"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <Button type="submit" disabled={pending}>
           {pending ? "Sending…" : "Send invite"}
         </Button>
