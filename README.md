@@ -113,20 +113,38 @@ Each Vercel project points at one hosted Supabase project (dev or prod). Never p
 - Build → Node.js Version: **24.x**.
 - Environment variables (Production):
 
-| Name                                   | Visibility                  | Notes                                                        |
-| -------------------------------------- | --------------------------- | ------------------------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`             | public (inlined at build)   |                                                              |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public (inlined at build)   | publishable key, not the secret key                          |
-| `NEXT_PUBLIC_SITE_URL`                 | public (inlined at build)   | the Vercel production URL, no trailing slash                 |
-| `SUPABASE_SECRET_KEY`                  | server-only, mark Sensitive |                                                              |
-| `BOOTSTRAP_ADMIN_EMAIL`                | server-only                 | needed until the first admin signs in (`/auth/callback`)     |
-| `ANTHROPIC_API_KEY`                    | server-only, mark Sensitive | unset = AI features show "AI is not configured"              |
-| `ENABLE_EXPERIMENTAL_COREPACK` = `1`   | build setting               | uses the pnpm version pinned in `packageManager`, as CI does |
+| Name                                   | Visibility                  | Notes                                                           |
+| -------------------------------------- | --------------------------- | --------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | public (inlined at build)   |                                                                 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public (inlined at build)   | publishable key, not the secret key                             |
+| `NEXT_PUBLIC_SITE_URL`                 | public (inlined at build)   | the Vercel production URL, no trailing slash                    |
+| `SUPABASE_SECRET_KEY`                  | server-only, mark Sensitive |                                                                 |
+| `BOOTSTRAP_ADMIN_EMAIL`                | server-only                 | needed until the first admin signs in (`/auth/callback`)        |
+| `ANTHROPIC_API_KEY`                    | server-only, mark Sensitive | unset = AI features show "AI is not configured"                 |
+| `DATABASE_URL`                         | server-only, mark Sensitive | Supabase transaction pooler (port 6543) as `job_runner` (below) |
+| `APP_INNGEST_EVENT_KEY`                | server-only, mark Sensitive | from the HJ Inngest account, Production environment             |
+| `APP_INNGEST_SIGNING_KEY`              | server-only, mark Sensitive | same account/environment; starts with `signkey-`                |
+| `ENABLE_EXPERIMENTAL_COREPACK` = `1`   | build setting               | uses the pnpm version pinned in `packageManager`, as CI does    |
 
 - **Never set** on Vercel: `AI_FAKE`, `ANTHROPIC_BASE_URL`, `AI_LIVE_TESTS`, `E2E_PROD`,
   `ANTHROPIC_STUB_PORT`. Leave `AI_MODEL_GENERATION` / `AI_MODEL_CLASSIFICATION` unset unless you
   mean to override `lib/ai/config.ts`.
 - Changing a `NEXT_PUBLIC_*` value needs a redeploy (it's baked into the build).
+
+### Job database role (`job_runner`)
+
+Background jobs connect with `DATABASE_URL` and act as the user via `set local role authenticated`.
+They should connect as `job_runner`, a role the migrations create with **NOLOGIN NOINHERIT**, no other
+attributes, and membership of `authenticated` only. On its own it can't read anything or bypass RLS.
+Once per hosted project (the one manual DB step, since passwords can't live in migrations):
+
+1. Generate a password locally and copy it (never paste it in chat):
+   `$p = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24)).ToLower(); Set-Clipboard $p; Remove-Variable p`
+2. Supabase → SQL Editor: `alter role job_runner with login password '<paste>';`, run it, then clear the editor.
+3. Vercel `DATABASE_URL` (Production, Sensitive): the **Transaction pooler** string with user
+   `job_runner.<project-ref>` and that password. Redeploy.
+4. Start research once to check. In production, a privileged `DATABASE_URL` role logs
+   `[jobs] DATABASE_URL connects as a privileged role`.
 
 ### 3. First admin (no hosted keys on your machine)
 
