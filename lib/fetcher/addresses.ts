@@ -43,6 +43,12 @@ for (const [net, prefix] of [
   blocked.addSubnet(net, prefix, "ipv6");
 }
 
+// SEC-3: IPv6 is ALLOWLISTED to global unicast (2000::/3) first; the denylist above then
+// removes the special ranges inside it. Unassigned/reserved space (e.g. 1000::/4, 4000::/2)
+// is refused.
+const globalUnicastV6 = new BlockList();
+globalUnicastV6.addSubnet("2000::", 3, "ipv6");
+
 /** The IPv4 address inside an IPv4-mapped/compatible IPv6 address, if any. */
 function embeddedIPv4(ip: string): string | null {
   const lower = ip.toLowerCase();
@@ -68,6 +74,7 @@ export function isBlockedAddress(address: string): boolean {
     if (canonical !== ip.toLowerCase()) return isBlockedAddress(canonical);
     // ::, ::1, ::ffff:a.b.c.d, ::a.b.c.d, ::7f00:1 ... Public unicast (2000::/3) never starts with "::".
     if (ip.startsWith("::") || embeddedIPv4(ip) !== null) return true;
+    if (!globalUnicastV6.check(ip, "ipv6")) return true;
     return blocked.check(ip, "ipv6");
   }
   return true;

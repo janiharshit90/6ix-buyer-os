@@ -14,7 +14,7 @@ import { setJobSqlForTests, UserInactiveError, withUserTx } from "@/lib/db/as-us
 import { createPlainFetcher } from "@/lib/fetcher/plain";
 import { fetchPage, fingerprintProject, pendingPageIds } from "@/lib/research/steps";
 
-import { adminClient, createTestUser, localStack, signedInClient } from "./local-supabase";
+import { adminClient, createTestUser, jobRunnerDbUrl, signedInClient } from "./local-supabase";
 
 let server: Server;
 let sql: postgres.Sql;
@@ -55,7 +55,8 @@ beforeAll(async () => {
     },
   });
 
-  sql = postgres(localStack().dbUrl, { prepare: false, max: 3, onnotice: () => {} });
+  // As production: the least-privilege job_runner role (NOINHERIT, member of authenticated).
+  sql = postgres(await jobRunnerDbUrl(), { prepare: false, max: 3, onnotice: () => {} });
   setJobSqlForTests(sql);
 
   [owner, other] = await Promise.all([

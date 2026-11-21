@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import { Constants, type Json } from "@/lib/db/types";
 
+import type { CheckField } from "./check-types";
+
 const E = Constants.public.Enums;
 export const PAYOUT_MODELS = E.payout_model;
 export const CAP_COUNTS = E.cap_counts;
@@ -192,29 +194,47 @@ export type ChecklistFacts = {
  * Which offer facts are still unknown. Code, not AI (M1); AI flagging of unconfirmed
  * values arrives with the AI service in M2. Call hours only matter for pay-per-call.
  */
-export function missingFields(f: ChecklistFacts): string[] {
-  const missing: string[] = [];
-  const add = (unknown: boolean, label: string) => unknown && missing.push(label);
+/** One unknown checklist fact: a stable field key (for code) and a label (for people). */
+export type MissingItem = { field: CheckField; label: string };
 
-  add(!f.advertiser_name, "Advertiser");
-  add(!f.vertical, "Vertical");
-  add(!f.payout_model, "Payout model");
+/**
+ * Which offer facts are still unknown. Code, not AI. Call hours only matter for pay-per-call.
+ * Code uses the `field` keys; labels are display copy and can change freely.
+ */
+export function missingItems(f: ChecklistFacts): MissingItem[] {
+  const missing: MissingItem[] = [];
+  const add = (unknown: boolean, field: CheckField, label: string) =>
+    unknown && missing.push({ field, label });
+
+  add(!f.advertiser_name, "advertiser", "Advertiser");
+  add(!f.vertical, "vertical", "Vertical");
+  add(!f.payout_model, "payout_model", "Payout model");
   if (f.economics) {
     const tiers = f.economics.payout_tiers;
-    add(!Array.isArray(tiers) || tiers.length === 0, "Payout tiers");
-    add(f.economics.target_cpl == null, "Target CPL");
-    add(f.economics.target_roi == null, "Target ROI");
+    add(!Array.isArray(tiers) || tiers.length === 0, "payout_tiers", "Payout tiers");
+    add(f.economics.target_cpl == null, "target_cpl", "Target CPL");
+    add(f.economics.target_roi == null, "target_roi", "Target ROI");
   }
-  add(!f.states?.length, "States");
-  add(f.cap_amount == null || !f.cap_counts || !f.cap_period, "Cap (amount, what counts, period)");
-  if (f.payout_model === "ppc") add(f.call_hours == null, "Call hours");
-  add(!f.optimisation_event, "Optimisation event");
-  add(f.feedback_delay_days == null, "Feedback delay");
-  add(f.restrictions == null, "Restrictions (banned claims/words)");
-  add(f.approval_required == null, "Network approval required?");
+  add(!f.states?.length, "states", "States");
+  add(
+    f.cap_amount == null || !f.cap_counts || !f.cap_period,
+    "cap",
+    "Cap (amount, what counts, period)",
+  );
+  if (f.payout_model === "ppc") add(f.call_hours == null, "call_hours", "Call hours");
+  add(!f.optimisation_event, "optimisation_event", "Optimisation event");
+  add(f.feedback_delay_days == null, "feedback_delay_days", "Feedback delay");
+  add(f.restrictions == null, "restrictions", "Restrictions (banned claims/words)");
+  add(f.approval_required == null, "approval_required", "Network approval required?");
   add(
     !f.urls.some((u) => u.kind === "our_lander" || u.kind === "offer_page"),
+    "urls",
     "Our lander or offer page URL",
   );
   return missing;
+}
+
+/** Labels of the unknown facts, for the checklist UI. */
+export function missingFields(f: ChecklistFacts): string[] {
+  return missingItems(f).map((m) => m.label);
 }

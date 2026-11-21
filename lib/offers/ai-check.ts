@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { storedCheckSchema, type Finding, type StoredCheck } from "./check-types";
 import { ruleFindings, type RuleCheckInput } from "./checks";
-import { canSeeEconomics, getOffer, getVersions, type VersionView } from "./queries";
+import { canEditOffer, canSeeEconomics, getOffer, getVersions, type VersionView } from "./queries";
 
 export const OFFER_CHECK_PURPOSE = "offer.ai_check";
 
@@ -129,6 +129,15 @@ export async function runOfferCheck(
     return {
       ok: false,
       message: "That offer version doesn't exist or you can't see it.",
+      retryable: false,
+    };
+  }
+  // SEC-1: only the offer's editors (owner buyer, managers, admins) may run it: it spends their
+  // budget and stores findings on the draft. The DB re-checks this on insert.
+  if (!canEditOffer(profile, offer)) {
+    return {
+      ok: false,
+      message: "Only this offer's owner, a manager or an admin can check it.",
       retryable: false,
     };
   }

@@ -22,6 +22,9 @@ export default defineConfig({
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
           environment: "node",
+          // One file at a time: some tests change global state briefly (e.g. the last-admin race
+          // test deactivates other admins), which would leak into files running alongside.
+          fileParallelism: false,
           testTimeout: 30_000,
           hookTimeout: 60_000,
         },

@@ -1,7 +1,7 @@
 -- offer_ai_checks: written only by the server, tied to a real succeeded call, append-only,
 -- hidden from creatives (findings may mention economics).
 begin;
-select plan(11);
+select plan(12);
 
 select tests.create_user('buyer_a', 'buyer', true);
 select tests.create_user('buyer_b', 'buyer', true);
@@ -30,7 +30,7 @@ select throws_ok(
   $$ insert into public.offer_ai_checks (offer_version_id, ai_call_id, prompt_version, model, rule_findings, ai_findings, created_by)
      values (tests.version_id('Offer A', 1), (select id from public.ai_calls where purpose = 'offer.ai_check'),
              'offer-check@1', 'm', '[]', '[]', tests.user_id('buyer_b')) $$,
-  '23514', null, 'a check must come from the same user''s call'
+  '42501', null, 'another buyer can''t record a check on someone else''s draft'
 );
 
 -- A failed call can't back a check.
@@ -72,15 +72,37 @@ reset role;
 select tests.authenticate_as('creative');
 select is((select count(*)::int from public.offer_ai_checks), 0, 'creatives never see checks (economics)');
 
--- ── discarding the draft removes its checks ────────────────────────────────
+-- ── discarding a (v2) draft removes its checks ─────────────────────────────
+-- (An offer's ONLY draft can't be discarded since the hardening migration, so: approve v1,
+-- check a new v2 draft, discard v2.)
+reset role;
+select tests.authenticate_as('manager');
+select public.approve_offer_version(tests.version_id('Offer A', 1));
+reset role;
+select tests.authenticate_as('buyer_a');
+select public.create_draft_from_approved(tests.offer_id('Offer A'));
+reset role;
+set local role service_role;
+select public.begin_ai_call(tests.user_id('buyer_a'), 'offer.ai_check_v2', 'claude-haiku-5-5',
+  'offer-check@1', 'p1', 0.01, null, 'offer_version', tests.version_id('Offer A', 2));
+select public.finish_ai_call((select id from public.ai_calls where purpose = 'offer.ai_check_v2'),
+  'succeeded', 0.0004, 'claude-haiku-5-5', 900, 120);
+insert into public.offer_ai_checks (offer_version_id, ai_call_id, prompt_version, model, rule_findings, ai_findings, created_by)
+values (tests.version_id('Offer A', 2), (select id from public.ai_calls where purpose = 'offer.ai_check_v2'),
+        'offer-check@1', 'claude-haiku-5-5', '[]', '[]', tests.user_id('buyer_a'));
 reset role;
 select tests.authenticate_as('buyer_a');
 select lives_ok(
-  $$ delete from public.offer_versions where id = tests.version_id('Offer A', 1) $$,
-  'owner discards the draft'
+  $$ delete from public.offer_versions where id = tests.version_id('Offer A', 2) $$,
+  'owner discards the v2 draft'
 );
 reset role;
-select is((select count(*)::int from public.offer_ai_checks), 0, 'its checks go with it');
+select is(
+  (select count(*)::int from public.offer_ai_checks where offer_version_id is not null
+     and ai_call_id = (select id from public.ai_calls where purpose = 'offer.ai_check_v2')),
+  0, 'its checks go with it'
+);
+select is((select count(*)::int from public.offer_ai_checks), 1, 'v1''s check (now approved) stays');
 
 select * from finish();
 rollback;

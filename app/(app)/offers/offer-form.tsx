@@ -5,7 +5,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { draftChecklistFacts, toPayload, type OfferDraft } from "@/lib/offers/draft";
+import { draftChecklistFacts, toPayload, withRowKeys, type OfferDraft } from "@/lib/offers/draft";
 import {
   CAP_COUNTS,
   CAP_PERIODS,
@@ -101,7 +101,8 @@ export function OfferForm({
   advertiserNames: string[];
   submitLabel: string;
 }) {
-  const [d, setD] = useState<OfferDraft>(initial);
+  // Rows get stable client-only keys, so deleting a row doesn't shift focus/state to its neighbour.
+  const [d, setD] = useState<OfferDraft>(() => withRowKeys(initial));
   const [state, action, pending] = useActionState(saveOfferDraft, IDLE);
   const set = <K extends keyof OfferDraft>(key: K, value: OfferDraft[K]) =>
     setD((prev) => ({ ...prev, [key]: value }));
@@ -213,7 +214,7 @@ export function OfferForm({
             <p className="text-muted-foreground text-xs">None entered (unknown).</p>
           )}
           {d.tiers.map((t, i) => (
-            <div key={i} className="grid grid-cols-[1fr_8rem_1fr_auto] gap-2">
+            <div key={t.key ?? i} className="grid grid-cols-[1fr_8rem_1fr_auto] gap-2">
               <Input
                 aria-label={`Tier ${i + 1} label`}
                 placeholder="Label, e.g. base"
@@ -268,7 +269,12 @@ export function OfferForm({
             variant="outline"
             size="sm"
             className="w-fit"
-            onClick={() => set("tiers", [...d.tiers, { label: "", amount: "", condition: "" }])}
+            onClick={() =>
+              set("tiers", [
+                ...d.tiers,
+                { label: "", amount: "", condition: "", key: crypto.randomUUID() },
+              ])
+            }
           >
             Add tier
           </Button>
@@ -398,7 +404,7 @@ export function OfferForm({
               <div key={day} className="flex flex-wrap items-center gap-2">
                 <span className="w-10 text-sm font-medium capitalize">{day}</span>
                 {d.days[day].map((w, i) => (
-                  <span key={i} className="flex items-center gap-1">
+                  <span key={w.key ?? i} className="flex items-center gap-1">
                     <Input
                       type="time"
                       aria-label={`${day} window ${i + 1} start`}
@@ -447,7 +453,10 @@ export function OfferForm({
                   onClick={() =>
                     set("days", {
                       ...d.days,
-                      [day]: [...d.days[day], { start: "09:00", end: "17:00" }],
+                      [day]: [
+                        ...d.days[day],
+                        { start: "09:00", end: "17:00", key: crypto.randomUUID() },
+                      ],
                     })
                   }
                 >
@@ -506,7 +515,7 @@ export function OfferForm({
         hint="Versioned with the offer: changing them after approval needs a new draft."
       >
         {d.urls.map((u, i) => (
-          <div key={i} className="grid grid-cols-[1fr_11rem_auto] gap-2">
+          <div key={u.key ?? i} className="grid grid-cols-[1fr_11rem_auto] gap-2">
             <Input
               aria-label={`URL ${i + 1}`}
               type="url"
@@ -577,7 +586,10 @@ export function OfferForm({
           size="sm"
           className="w-fit"
           onClick={() =>
-            set("urls", [...d.urls, { url: "", kind: "offer_page", notTrackingLink: false }])
+            set("urls", [
+              ...d.urls,
+              { url: "", kind: "offer_page", notTrackingLink: false, key: crypto.randomUUID() },
+            ])
           }
         >
           Add URL

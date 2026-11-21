@@ -16,6 +16,7 @@ import {
   phoneSchema,
   type ResearchPage,
 } from "@/lib/research/queries";
+import { researchState } from "@/lib/research/status";
 import { createClient } from "@/lib/supabase/server";
 
 import { LiveRefresh, RetryPageButton, RunAgainButton } from "../controls";
@@ -56,10 +57,7 @@ async function ProjectDetail({ params }: Pick<PageProps<"/research/[projectId]">
     p_project_id: projectId,
   });
 
-  const working =
-    project.status === "active" &&
-    (pages.some((p) => p.fetch_status === "pending" || p.fetch_status === "fetching") ||
-      project.fingerprint_status === "running");
+  const { busy, stalled, working } = researchState(project, pages);
   const current =
     fingerprints.find((f) => f.id === project.current_fingerprint_id) ?? fingerprints[0];
   const pageById = new Map(pages.map((p) => [p.id, p]));
@@ -80,7 +78,17 @@ async function ProjectDetail({ params }: Pick<PageProps<"/research/[projectId]">
           · owner {formatValue(project.owner?.display_name)} · started{" "}
           {formatDateTime(project.created_at)}
         </p>
-        <LiveRefresh active={working} />
+        {/* Stalled projects still poll, slowly, so a "Run again" shows its progress. */}
+        <LiveRefresh active={busy} slow={stalled} />
+        {stalled && (
+          <p
+            role="status"
+            className="text-sm text-amber-700 dark:text-amber-400"
+            data-testid="research-stalled"
+          >
+            Nothing has changed for a few minutes; the job may not be running. Use “Run again”.
+          </p>
+        )}
       </div>
 
       <section className="flex flex-col gap-2" aria-label="Pages">

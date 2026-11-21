@@ -169,7 +169,20 @@ export async function runStructured<I, O>(args: RunArgs<I, O>): Promise<RunResul
       },
     });
   } catch (cause) {
-    if (cause instanceof AiError) throw cause; // e.g. not configured: nothing was sent
+    if (cause instanceof AiError) {
+      // BUG-7: nothing was sent, but a reservation exists: settle it at $0 instead of letting it
+      // expire as "abandoned" at the full worst-case cost.
+      await settle({
+        callId,
+        status: "failed",
+        costUsd: 0,
+        model,
+        errorCode: cause.code,
+        errorMessage: "Failed before the request was sent",
+        latencyMs: now() - started,
+      });
+      throw cause;
+    }
     return fail("provider_error", {
       cause,
       // Status + class only: provider messages can echo request content.

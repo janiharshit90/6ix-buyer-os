@@ -2,8 +2,9 @@ import "server-only";
 
 import { NonRetriableError } from "inngest";
 
-import { UserInactiveError, withUserTx } from "@/lib/db/as-user";
+import { UserInactiveError } from "@/lib/db/as-user";
 import { fetchPage, fingerprintProject, pendingPageIds } from "@/lib/research/steps";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import { inngest, RESEARCH_RUN, researchRunEvent } from "./client";
 
@@ -20,20 +21,24 @@ export const researchRun = inngest.createFunction(
     // One run per project at a time; queued runs wait.
     concurrency: { key: "event.data.projectId", limit: 1 },
     retries: 3,
-    onFailure: async ({ event }) => {
+    onFailure: async ({ event, error }) => {
       const parsed = researchRunEvent.safeParse(event.data.event.data);
       if (!parsed.success) return;
-      const { userId, projectId } = parsed.data;
-      try {
-        await withUserTx(
-          userId,
-          (tx) => tx`update public.research_projects
-          set fingerprint_status = 'failed',
-              fingerprint_error = 'The research job failed after retries. Use Retry to run it again.'
-          where id = ${projectId} and fingerprint_status = 'running'`,
+      // BUG-2: the user may be deactivated (nothing can be written AS them), so recovery uses
+      // the narrow service-role RPC that can only move running/pending/fetching to failed.
+      const reason =
+        error?.message === new UserInactiveError().message
+          ? "The research job stopped because the user who started it is no longer active."
+          : "The research job failed after retries. Use Retry or Run again.";
+      const { error: rpcError } = await createAdminClient().rpc("abort_stalled_research_run", {
+        p_project_id: parsed.data.projectId,
+        p_reason: reason,
+      });
+      if (rpcError) {
+        // Visible in the logs; the page's 2-minute "Run again" fallback still applies.
+        console.error(
+          `[research] could not abort stalled run ${parsed.data.projectId}: ${rpcError.code}`,
         );
-      } catch {
-        // User inactive or DB down: nothing more we can record here.
       }
     },
   },

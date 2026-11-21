@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -75,6 +75,9 @@ export function ApproveForm({
   missingCount: number;
 }) {
   const [state, action, pending] = useActionState(approveOfferVersion, IDLE);
+  // Controlled, so the note survives a failed approval (React resets uncontrolled fields after
+  // every form action). On success the action redirects.
+  const [note, setNote] = useState("");
   return (
     <form action={action} className="flex max-w-md flex-col gap-2 rounded-lg border p-3">
       <input type="hidden" name="offerId" value={offerId} />
@@ -89,6 +92,8 @@ export function ApproveForm({
       <textarea
         id="approve-note"
         name="note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
         rows={2}
         maxLength={2000}
         placeholder="Note (optional)"

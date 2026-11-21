@@ -9,7 +9,7 @@ import { fingerprintV1, type FingerprintPage } from "@/lib/ai/prompts/fingerprin
 import { runStructured } from "@/lib/ai/run";
 import { withUserTx } from "@/lib/db/as-user";
 import { createPlainFetcher } from "@/lib/fetcher/plain";
-import type { FetchFailure, PageFetcher } from "@/lib/fetcher/types";
+import type { FetchFailure, FetchOutcome, PageFetcher } from "@/lib/fetcher/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import {
@@ -45,7 +45,11 @@ export async function pendingPageIds(userId: string, projectId: string): Promise
     const rows = await tx<{ id: string }[]>`
       select p.id from public.fetched_pages p
       join public.research_projects r on r.id = p.project_id
-      where p.project_id = ${projectId} and p.fetch_status = 'pending' and r.status = 'active'
+      where p.project_id = ${projectId} and r.status = 'active'
+        -- BUG-1: a page left in 'fetching' by a crashed step is claimable again after a while
+        -- (same interval as the retry RPC: private.stale_fetch_after()).
+        and (p.fetch_status = 'pending'
+             or (p.fetch_status = 'fetching' and p.updated_at < now() - private.stale_fetch_after()))
       order by p.url_kind, p.requested_url`; // our_lander first (enum order); deterministic
     return rows.map((r) => r.id);
   });
@@ -62,7 +66,9 @@ export async function fetchPage(
       { requested_url: string; url_kind: string; not_tracking_link: boolean }[]
     >`
       select requested_url, url_kind, not_tracking_link from public.fetched_pages
-      where id = ${pageId} and fetch_status = 'pending'`;
+      where id = ${pageId}
+        and (fetch_status = 'pending'
+             or (fetch_status = 'fetching' and updated_at < now() - private.stale_fetch_after()))`;
     if (!page) return null;
     const skip =
       page.url_kind === "offer_page" && !page.not_tracking_link
@@ -86,7 +92,20 @@ export async function fetchPage(
 
   // 2. Fetch (outside any transaction).
   const fetcher = deps.fetcher ?? createPlainFetcher();
-  const outcome = await fetcher.fetch(claim.requested_url);
+  let outcome: FetchOutcome;
+  try {
+    outcome = await fetcher.fetch(claim.requested_url);
+  } catch (error) {
+    // BUG-1: an unexpected throw must not leave the page in 'fetching' forever.
+    await withUserTx(
+      userId,
+      (tx) => tx`update public.fetched_pages
+      set fetch_status = 'failed', error_code = 'unexpected',
+          error_message = 'The fetch failed unexpectedly. Use Retry.', fetched_at = now()
+      where id = ${pageId} and fetch_status = 'fetching'`,
+    );
+    throw error;
+  }
 
   // 3. Store the result.
   await withUserTx(userId, async (tx) => {

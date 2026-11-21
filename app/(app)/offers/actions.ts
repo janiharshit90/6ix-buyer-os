@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireActiveProfile } from "@/lib/auth/current-profile";
+import { dbMessage } from "@/lib/db/errors";
 import { runOfferCheck } from "@/lib/offers/ai-check";
 import { offerFormSchema, toSaveDraftArgs } from "@/lib/offers/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -20,23 +21,6 @@ export type FormState = {
   /** Whether trying again can help (shows a Retry button). */
   retryable?: boolean;
 };
-
-/** Turns DB errors into something a buyer can act on (no SQL internals). */
-function dbMessage(error: { code?: string; message: string }) {
-  switch (error.code) {
-    case "42501":
-      return "You don't have permission to do that.";
-    case "23505":
-      return "That conflicts with an existing record (e.g. an open draft or a duplicate URL).";
-    case "23514":
-      return "A value failed a database check. Review the highlighted fields.";
-    case "P0001":
-    case "P0002":
-      return error.message;
-    default:
-      return `Save failed: ${error.message}`;
-  }
-}
 
 export async function saveOfferDraft(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireActiveProfile();
@@ -96,6 +80,7 @@ export async function discardDraft(_prev: FormState, formData: FormData): Promis
     .from("offer_versions")
     .delete()
     .eq("id", parsed.data.versionId)
+    .eq("offer_id", parsed.data.offerId)
     .eq("status", "draft")
     .select("id");
   if (error) return { status: "error", message: dbMessage(error) };

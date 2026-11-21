@@ -36,6 +36,25 @@ export type VerifiedLists = Pick<
   "brand" | "advertiser" | "product" | "claims" | "phrases"
 >;
 
+/**
+ * SEC-4: a quote must be substantial: at least 4 characters, or exactly the value for short
+ * names (2-3 characters, e.g. "GE", "VA"), so "to" or "in" can't ground an item.
+ */
+export function quoteIsSubstantial(quote: string, value: string): boolean {
+  if (quote.length >= 4) return true;
+  return quote.length >= 2 && quote === value;
+}
+
+const tokens = (s: string) => s.split(/[^a-z0-9]+/).filter(Boolean);
+
+/** SEC-4: a brand/advertiser quote must contain the name (a 3+ char token of it, or all of it). */
+export function quoteNamesValue(quote: string, value: string): boolean {
+  const long = tokens(value).filter((t) => t.length >= 3);
+  const quoteTokens = new Set(tokens(quote));
+  if (long.length > 0) return long.some((t) => quoteTokens.has(t) || quote.includes(t));
+  return value.length > 0 && quote.includes(value);
+}
+
 /** Drops items that cite an unknown page or whose quote isn't in that page's text. */
 export function verifyItems(
   output: FingerprintOutput,
@@ -43,13 +62,18 @@ export function verifyItems(
 ): { lists: VerifiedLists; dropped: number } {
   const byId = new Map(pages.map((p) => [p.id, normalizeForMatch(`${p.title ?? ""}\n${p.text}`)]));
   let dropped = 0;
-  const keep = (items: FingerprintItem[]) => {
+  const keep = (items: FingerprintItem[], opts: { nameMustBeQuoted?: boolean } = {}) => {
     const seen = new Set<string>();
     return items.filter((item) => {
       const haystack = byId.get(item.page_id);
       const quote = normalizeForMatch(item.quote);
-      const ok = haystack !== undefined && quote.length >= 2 && haystack.includes(quote);
-      const key = `${item.page_id}|${normalizeForMatch(item.value)}`;
+      const value = normalizeForMatch(item.value);
+      const ok =
+        haystack !== undefined &&
+        quoteIsSubstantial(quote, value) &&
+        haystack.includes(quote) &&
+        (!opts.nameMustBeQuoted || quoteNamesValue(quote, value));
+      const key = `${item.page_id}|${value}`;
       if (!ok || seen.has(key)) {
         if (!ok) dropped++;
         return false;
@@ -60,8 +84,9 @@ export function verifyItems(
   };
   return {
     lists: {
-      brand: keep(output.brand),
-      advertiser: keep(output.advertiser),
+      // Names must appear in their own quote: a made-up brand can't borrow an unrelated quote.
+      brand: keep(output.brand, { nameMustBeQuoted: true }),
+      advertiser: keep(output.advertiser, { nameMustBeQuoted: true }),
       product: keep(output.product),
       claims: keep(output.claims),
       phrases: keep(output.phrases),
@@ -144,8 +169,9 @@ export function computeConfidence(
   return inDomain ? "high" : "medium";
 }
 
+// BUG-10: no "privacy policy" / "terms of use": every real lander has them in its footer.
 const PLACEHOLDER =
-  /\b(coming soon|under construction|domain (is )?for sale|parked|lorem ipsum|privacy policy|terms of (use|service))\b/i;
+  /\b(coming soon|under construction|domain (is )?for sale|parked|lorem ipsum)\b/i;
 const STOP = new Set([
   "and",
   "the",

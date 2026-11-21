@@ -12,7 +12,9 @@ import {
 } from "./schema";
 
 type Weekday = (typeof WEEKDAYS)[number];
-type TimeWindow = { start: string; end: string };
+/** `key` is client-only (stable React keys for editable rows); never sent or stored. */
+type RowKey = { key?: string };
+type TimeWindow = { start: string; end: string } & RowKey;
 
 /** Form state. Numbers stay strings while typing; "" means unknown (sent as null). */
 export type OfferDraft = {
@@ -22,7 +24,7 @@ export type OfferDraft = {
   vertical: string;
   status: (typeof OFFER_STATUSES)[number];
   payoutModel: string;
-  tiers: { label: string; amount: string; condition: string }[];
+  tiers: ({ label: string; amount: string; condition: string } & RowKey)[];
   targetCpl: string;
   targetRoi: string;
   states: string[];
@@ -39,7 +41,11 @@ export type OfferDraft = {
   bannedClaims: string;
   bannedWords: string;
   restrictionNotes: string;
-  urls: { url: string; kind: (typeof OFFER_URL_KINDS)[number]; notTrackingLink: boolean }[];
+  urls: ({
+    url: string;
+    kind: (typeof OFFER_URL_KINDS)[number];
+    notTrackingLink: boolean;
+  } & RowKey)[];
 };
 
 export const EMPTY_DRAFT: OfferDraft = {
@@ -101,7 +107,10 @@ export function toPayload(d: OfferDraft): OfferFormInput {
         ? {
             timezone: d.timezone,
             days: Object.fromEntries(
-              WEEKDAYS.filter((day) => d.days[day].length).map((day) => [day, d.days[day]]),
+              WEEKDAYS.filter((day) => d.days[day].length).map((day) => [
+                day,
+                d.days[day].map(({ start, end }) => ({ start, end })), // drop client-only keys
+              ]),
             ),
           }
         : null,
@@ -227,5 +236,21 @@ export function draftFromVersion(
     bannedWords: restrictions ? strArray(restrictions.banned_words).join("\n") : "",
     restrictionNotes: restrictions ? str(restrictions.notes) : "",
     urls: v.urls.map((u) => ({ url: u.url, kind: u.kind, notTrackingLink: u.not_tracking_link })),
+  };
+}
+
+/** Gives every editable row a stable client-only key (for React lists). */
+export function withRowKeys(
+  d: OfferDraft,
+  newKey: () => string = () => crypto.randomUUID(),
+): OfferDraft {
+  const k = <T extends RowKey>(row: T): T => (row.key ? row : { ...row, key: newKey() });
+  return {
+    ...d,
+    tiers: d.tiers.map(k),
+    urls: d.urls.map(k),
+    days: Object.fromEntries(
+      Object.entries(d.days).map(([day, windows]) => [day, windows.map(k)]),
+    ) as OfferDraft["days"],
   };
 }
